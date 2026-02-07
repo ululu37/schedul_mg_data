@@ -54,7 +54,7 @@ func (t *TeacherEverlute) Everlute() error {
 			break
 		}
 	}
-
+	//fmt.Println("all::", allSubjects)
 	// Evaluate each teacher
 
 	for _, teacher := range teachers {
@@ -76,48 +76,58 @@ func (t *TeacherEverlute) Everlute() error {
 			}
 		}
 
-		subjectsEvu := allSubjects
+		subjectsEvu := make(map[uint]entities.Subject)
+
+		for _, s := range allSubjects {
+			subjectsEvu[s.ID] = s
+		}
 
 		for _, subject := range mysubject {
-			for j, s := range subjectsEvu {
-				if subject.SubjectID == s.ID {
-					subjectsEvu = append(subjectsEvu[:j], subjectsEvu[j+1:]...)
-					break
-				}
-			}
+			delete(subjectsEvu, subject.SubjectID)
+		}
+		subjectsEvuList := []entities.Subject{}
+		for _, v := range subjectsEvu {
+			subjectsEvuList = append(subjectsEvuList, v)
 		}
 
-		for p := 1; ; p++ {
+		toMySubject := []entities.TeacherMySubject{}
+		//	fmt.Println(":::::::", subjectsEvu)
+		limit := 100
+		for len(subjectsEvuList) > 0 {
+			n := limit
 
-			limit := 100
-			for len(subjectsEvu) > 0 {
-				n := limit
-				if len(subjectsEvu) < limit {
-					n = len(subjectsEvu)
-				}
-				t.everluteAi(teacher, subjectsEvu[:n])
-				subjectsEvu = subjectsEvu[n:]
+			if len(subjectsEvuList) < limit {
+				n = len(subjectsEvuList)
 			}
-			t.everluteAi(teacher, subjectsEvu[:100])
-			subjectsEvu = subjectsEvu[100:]
 
-			if len(subjectsEvu) <= 100 {
-				if len(subjectsEvu) > 0 {
-					t.everluteAi(teacher, subjectsEvu)
-				}
-
+			if len(subjectsEvuList) == 0 {
 				break
 			}
+			fmt.Println("len subjectsEvuList before: %d, n : %d", len(subjectsEvuList), n)
+			aiRes, err := t.everluteAi(teacher, subjectsEvuList[:n])
+			if err != nil {
+				return err
+			}
+			for _, ev := range aiRes.Evaluation {
+				fmt.Println("id: %v, adtitude: %v", ev.ID, ev.Adtritud)
+				toMySubject = append(toMySubject, entities.TeacherMySubject{
+					SubjectID:  uint(ev.ID),
+					Preference: ev.Adtritud,
+				})
 
+			}
+
+			subjectsEvuList = subjectsEvuList[n:]
 		}
 
+		t.teacherMg.AddMySubject(teacher.ID, toMySubject)
 	}
 
 	return nil
 }
 
 func (t *TeacherEverlute) everluteAi(teacher entities.Teacher, mysubject []entities.Subject) (*dto.EvaluationResponse, error) {
-
+	//fmt.Printf("ssssssss\n", mysubject)
 	respBody, errAi := t.agent.Chat([]aiAgent.Message{
 		{
 			Role: "system",
@@ -126,14 +136,13 @@ You are an aptitude evaluator for teachers and subjects.
 
 Evaluate the teacher’s aptitude for each subject.
 
-Aptitude score scale: 1–10
+Aptitude score scale: 0–10
 
 มาตราฐานการประเมิน
  10 - 9 > บอกว่าถนัด
  8-6 > ควรสอนได้ตามสายงานที่จบมา
  5-1 > น่าจะสอนได้ 
- วิชาที่ไม่น่าจะสอนไม่ได้ ไห้ตัดออกไม่ต้องส่งมา
-
+ วิชาที่ไม่น่าจะสอนไม่ได้ ไห้คะเเนเป็น 0 เเล้วตส่งมาด้วย
 Output JSON only.
 
 Output schema:
@@ -150,19 +159,20 @@ Output schema:
 		},
 	},
 	)
-
+	//fmt.Printf("rrrrrrrrr%+v\n", respBody)
 	if errAi != nil {
 		return nil, errAi
 	}
+
 	var res dto.EvaluationResponse
 
 	errJsonEncode := json.Unmarshal([]byte(respBody.Choices[0].Message.Content), &res)
 	if errJsonEncode != nil {
 		return nil, errJsonEncode
 	}
-	for _, ev := range res.Evaluation {
-		fmt.Printf("subject_id=%d aptitude=%d\n", ev.ID, ev.Adtritud)
-	}
+	// for _, ev := range res.Evaluation {
+	// 	fmt.Printf("subject_id=%d aptitude=%d\n", ev.ID, ev.Adtritud)
+	// }
 	fmt.Printf("-----------")
 	return &res, nil
 }

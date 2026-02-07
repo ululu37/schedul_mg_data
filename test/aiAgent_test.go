@@ -14,7 +14,7 @@ import (
 func TestGpt4oMini_Chat(t *testing.T) {
 	client := aiAgent.Agent{
 		ApiURL: "https://openrouter.ai/api/v1/chat/completions",
-		ApiKey: "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",
+		ApiKey: "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",
 	}
 
 	respBody, err := client.Chat([]aiAgent.Message{

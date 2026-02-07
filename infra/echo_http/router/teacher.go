@@ -57,17 +57,17 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 
 	g.GET("/:id/mysubject", func(c echo.Context) error {
 		teacherID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-		minPref, _ := strconv.Atoi(c.QueryParam("minpreference"))
+		//minPref, _ := strconv.Atoi(c.QueryParam("minpreference"))
 		page, _ := strconv.Atoi(c.QueryParam("page"))
 		perPage, _ := strconv.Atoi(c.QueryParam("perpage"))
-		list, count, err := uc.GetMySubject(uint(teacherID), minPref, page, perPage)
+		list, count, err := uc.GetMySubject(uint(teacherID), 1, page, perPage)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, map[string]any{"data": list, "count": count})
 	})
 	// Add subject to teacher
-	g.POST("/:id/subject", func(c echo.Context) error {
+	g.POST("/:id/mysubject", func(c echo.Context) error {
 		teacherID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 		var req []struct {
 			SubjectID  uint `json:"subject_id"`

@@ -28,14 +28,23 @@ func (p *PreCurriculum) Delete(id uint) error {
 	return p.PreRepo.Delete(id)
 }
 
-func (p *PreCurriculum) CreateSubject(preCurriculumID uint, subjectName string, credit int) error {
+func (p *PreCurriculum) CreateSubject(preCurriculumID uint, newSubjectInCurriculum []entities.SubjectInPreCurriculum) error {
 
-	subjectID, err := p.SubjectMg.Create(subjectName)
+	subjectNames := make([]string, 0, len(newSubjectInCurriculum))
+	for _, s := range newSubjectInCurriculum {
+		subjectNames = append(subjectNames, s.Subject.Name)
+	}
+
+	ids, err := p.SubjectMg.Create(subjectNames)
 	if err != nil {
 		return err
 	}
 
-	return p.PreRepo.AddSubject([]entities.SubjectInPreCurriculum{{PreCurriculumID: preCurriculumID, SubjectID: subjectID, Credit: credit}})
+	for i, s := range newSubjectInCurriculum {
+		s.SubjectID = ids[i]
+	}
+
+	return p.PreRepo.AddSubject(newSubjectInCurriculum)
 }
 
 func (p *PreCurriculum) RemoveSubject(SubjectInPreCurriculumID uint) error {

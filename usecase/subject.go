@@ -9,11 +9,17 @@ type SubjectMg struct {
 	SubjectRepo *repo.SubjectRepo // Changed to pointer to SubjectRepo
 }
 
-func (s *SubjectMg) Create(name string) (uint, error) {
-	return s.SubjectRepo.Create(&entities.Subject{Name: name}) // Updated to use SubjectRepo
-
+func (s *SubjectMg) Create(name []string) ([]uint, error) {
+	subjects := make([]entities.Subject, 0, len(name))
+	for _, n := range name {
+		subjects = append(subjects, entities.Subject{Name: n})
+	}
+	ids, err := s.SubjectRepo.CreateMany(subjects)
+	if err != nil {
+		return nil, err
+	}
+	return ids, nil
 }
-
 func (s *SubjectMg) Update(id uint, updated *entities.Subject) (*entities.Subject, error) {
 	return s.SubjectRepo.Update(id, updated) // New method for updating a subject
 }

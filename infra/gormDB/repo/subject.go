@@ -14,11 +14,16 @@ type SubjectRepo struct {
 func NewSubjectRepo(db *gorm.DB) *SubjectRepo {
 	return &SubjectRepo{DB: db}
 }
-func (r *SubjectRepo) Create(newSub *entities.Subject) (uint, error) {
-	if err := r.DB.Create(newSub).Error; err != nil {
-		return 0, err
+func (r *SubjectRepo) CreateMany(newSubs []entities.Subject) ([]uint, error) {
+	if err := r.DB.Create(&newSubs).Error; err != nil {
+		return nil, err
 	}
-	return newSub.ID, nil
+
+	ids := make([]uint, 0, len(newSubs))
+	for _, s := range newSubs {
+		ids = append(ids, s.ID)
+	}
+	return ids, nil
 }
 
 func (r *SubjectRepo) Update(id uint, updated *entities.Subject) (*entities.Subject, error) {

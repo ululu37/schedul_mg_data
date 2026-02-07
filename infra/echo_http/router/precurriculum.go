@@ -3,6 +3,7 @@ package router
 import (
 	"fmt"
 	"net/http"
+	"scadulDataMono/domain/entities"
 	"scadulDataMono/usecase"
 	"strconv"
 
@@ -64,6 +65,7 @@ func RegisterPreCurriculumRoutes(e *echo.Echo, uc *usecase.PreCurriculum) {
 	})
 
 	g.DELETE("/:id", func(c echo.Context) error {
+
 		id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 		if err := uc.Delete(uint(id)); err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
@@ -71,16 +73,27 @@ func RegisterPreCurriculumRoutes(e *echo.Echo, uc *usecase.PreCurriculum) {
 		return c.NoContent(http.StatusOK)
 	})
 	// Add subject to PreCurriculum
-	g.POST("/subject", func(c echo.Context) error {
-		var req struct {
-			PreCurriculumID uint   `json:"precurriculum_id"`
-			SubjectName     string `json:"subject_name"`
-			Credit          int    `json:"credit"`
+	g.POST("/:id/subject", func(c echo.Context) error {
+		id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+		var req []struct {
+			//PreCurriculumID uint   `json:"precurriculum_id"`
+			SubjectName string `json:"subject_name"`
+			Credit      int    `json:"credit"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
-		err := uc.CreateSubject(req.PreCurriculumID, req.SubjectName, req.Credit)
+		fmt.Println("id:", id)
+		var newSubjectInCurriculum []entities.SubjectInPreCurriculum
+		for _, r := range req {
+			newSubjectInCurriculum = append(newSubjectInCurriculum, entities.SubjectInPreCurriculum{
+				PreCurriculumID: uint(id),
+				Subject:         entities.Subject{Name: r.SubjectName},
+				Credit:          r.Credit,
+			})
+		}
+
+		err := uc.CreateSubject(uint(id), newSubjectInCurriculum)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
