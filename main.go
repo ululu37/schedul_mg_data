@@ -21,9 +21,15 @@ func main() {
 	preCurriculumRepo := &repo.PreCuriculumRepo{DB: db}
 	teacherRepo := repo.NewTeacherRepo(db)
 	authRepo := repo.NewAuthRepo(db)
+	termRepo := repo.NewTermRepo(db)
+	studentRepo := &repo.StudentRepo{DB: db}
+	classroomRepo := &repo.ClassroomRepo{DB: db}
+	curriculumRepo := &repo.CurriculumRepo{DB: db}
+	scadulStudentRepo := &repo.ScadulStudentRepo{DB: db}
+	scadulTeacherRepo := &repo.ScadulTeacherRepo{DB: db}
 	aiAgent := aiAgent.NewAiAgent(
-		"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",
-		"https://openrouter.ai/api/v1/chat/completions",
+		cfg.AiAgent.ApiKey,
+		cfg.AiAgent.Url,
 	)
 
 	// Init usecases
@@ -31,8 +37,15 @@ func main() {
 	preCurriculum := &usecase.PreCurriculum{PreRepo: preCurriculumRepo, SubjectMg: subjectMg}
 	teacherMg := usecase.NewTeacherMg(teacherRepo, authRepo)
 	teacherEverlute := usecase.NewTeacherEverlute(teacherMg, subjectMg, aiAgent)
+	termUsecase := usecase.NewTermUsecase(termRepo)
+	studentMg := usecase.NewStudentMg(studentRepo, authRepo)
+	classroomMg := usecase.NewClassroomMg(classroomRepo)
+	curriculumMg := usecase.NewCurriculumMg(curriculumRepo)
+	scadulStudentMg := usecase.NewScadulStudentMg(scadulStudentRepo)
+	scadulTeacherMg := usecase.NewScadulTeacherMg(scadulTeacherRepo)
+	auth := usecase.NewAuth(authRepo, studentMg, teacherMg)
 
 	// Start echo server
-	server := echohttp.NewEchoServer(&cfg, subjectMg, preCurriculum, teacherMg, teacherEverlute)
+	server := echohttp.NewEchoServer(&cfg, subjectMg, preCurriculum, teacherMg, teacherEverlute, termUsecase, studentMg, classroomMg, curriculumMg, scadulStudentMg, scadulTeacherMg, auth)
 	server.Start()
 }

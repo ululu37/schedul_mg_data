@@ -4,6 +4,7 @@ type Config struct {
 	Database Database
 	JWT      JWT
 	Server   Server
+	AiAgent  AiAgent
 }
 
 type Database struct {
@@ -22,4 +23,9 @@ type JWT struct {
 
 type Server struct {
 	Port string
+}
+
+type AiAgent struct {
+	ApiKey string
+	Url    string
 }

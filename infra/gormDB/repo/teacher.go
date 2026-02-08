@@ -26,14 +26,19 @@ func (r *TeacherRepo) Update(id uint, updated *entities.Teacher) (*entities.Teac
 	if err := r.DB.First(t, id).Error; err != nil {
 		return nil, err
 	}
-
 	t.Name = updated.Name
 	t.Resume = updated.Resume
-	t.AuthID = updated.AuthID
 
 	if err := r.DB.Save(t).Error; err != nil {
 		return nil, err
 	}
+
+	// Reload with associations if needed, or just return t which now has updated fields.
+	// However, if we want to be sure we have everything as a fresh get would return:
+	if err := r.DB.Preload("Auth").First(t, id).Error; err != nil {
+		return nil, err
+	}
+
 	return t, nil
 }
 
@@ -44,6 +49,14 @@ func (r *TeacherRepo) Delete(id uint) error {
 	}
 	if res.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+func (r *TeacherRepo) DeleteByAuthID(authID uint) error {
+	res := r.DB.Where("auth_id = ?", authID).Delete(&entities.Teacher{})
+	if res.Error != nil {
+		return res.Error
 	}
 	return nil
 }

@@ -27,7 +27,7 @@ func (r *StudentRepo) Update(id uint, updated *entities.Student) (*entities.Stud
 	}
 
 	s.Name = updated.Name
-	s.AuthID = updated.AuthID
+	//s.AuthID = updated.AuthID
 	s.CurriculumID = updated.CurriculumID
 	s.Year = updated.Year
 	s.ClassroomID = updated.ClassroomID
@@ -35,6 +35,12 @@ func (r *StudentRepo) Update(id uint, updated *entities.Student) (*entities.Stud
 	if err := r.DB.Save(s).Error; err != nil {
 		return nil, err
 	}
+
+	// Refresh data with preloads
+	if err := r.DB.Preload("Auth").Preload("Curriculum").Preload("Classroom").First(s, id).Error; err != nil {
+		return nil, err
+	}
+
 	return s, nil
 }
 
@@ -45,6 +51,14 @@ func (r *StudentRepo) Delete(id uint) error {
 	}
 	if res.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+func (r *StudentRepo) DeleteByAuthID(authID uint) error {
+	res := r.DB.Where("auth_id = ?", authID).Delete(&entities.Student{})
+	if res.Error != nil {
+		return res.Error
 	}
 	return nil
 }
@@ -93,4 +107,12 @@ func (r *StudentRepo) GetByClassRoom(classroomID uint) ([]entities.Student, erro
 		return nil, err
 	}
 	return list, nil
+}
+
+func (r *StudentRepo) GetByID(id uint) (*entities.Student, error) {
+	s := &entities.Student{}
+	if err := r.DB.Preload("Auth").Preload("Curriculum").Preload("Classroom").First(s, id).Error; err != nil {
+		return nil, err
+	}
+	return s, nil
 }

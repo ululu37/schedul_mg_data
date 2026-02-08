@@ -3,23 +3,16 @@ package router
 import (
 	"net/http"
 	"scadulDataMono/domain/entities"
+	"scadulDataMono/infra/echo_http/middleware"
 	"scadulDataMono/usecase"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
 
-type CreateTeacherRequest struct {
-	Name     string `json:"name"`
-	Resume   string `json:"resume"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Role     int    `json:"role"`
-}
-
 func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *usecase.TeacherEverlute) {
 	g := e.Group("/teacher")
-	// Get teacher by ID (no mysubject)
+
 	g.GET("/:id", func(c echo.Context) error {
 		teacherID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 		if err != nil {
@@ -30,10 +23,16 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, teacher)
-	})
+	}, middleware.Permit(0, 1))
 
 	g.POST("", func(c echo.Context) error {
-		req := CreateTeacherRequest{}
+		var req struct {
+			Name     string `json:"name"`
+			Resume   string `json:"resume"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+			Role     int    `json:"role"`
+		}
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
@@ -42,7 +41,7 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, map[string]any{"id": id})
-	})
+	}, middleware.Permit(0))
 
 	g.GET("", func(c echo.Context) error {
 		search := c.QueryParam("search")
@@ -53,11 +52,40 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, map[string]any{"data": list, "count": count})
-	})
+	}, middleware.Permit(0, 1))
+
+	g.PUT("/:id", func(c echo.Context) error {
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, "invalid id")
+		}
+		var req struct {
+			Name   string `json:"name"`
+			Resume string `json:"resume"`
+		}
+		if err := c.Bind(&req); err != nil {
+			return c.JSON(http.StatusBadRequest, err.Error())
+		}
+		updated, err := uc.Update(uint(id), req.Name, req.Resume)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, updated)
+	}, middleware.Permit(0))
+
+	g.DELETE("/:id", func(c echo.Context) error {
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, "invalid id")
+		}
+		if err := uc.Delete(uint(id)); err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return c.NoContent(http.StatusOK)
+	}, middleware.Permit(0))
 
 	g.GET("/:id/mysubject", func(c echo.Context) error {
 		teacherID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-		//minPref, _ := strconv.Atoi(c.QueryParam("minpreference"))
 		page, _ := strconv.Atoi(c.QueryParam("page"))
 		perPage, _ := strconv.Atoi(c.QueryParam("perpage"))
 		list, count, err := uc.GetMySubject(uint(teacherID), 1, page, perPage)
@@ -65,8 +93,8 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, map[string]any{"data": list, "count": count})
-	})
-	// Add subject to teacher
+	}, middleware.Permit(0, 1))
+
 	g.POST("/:id/mysubject", func(c echo.Context) error {
 		teacherID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 		var req []struct {
@@ -89,9 +117,8 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.NoContent(http.StatusOK)
-	})
+	}, middleware.Permit(0))
 
-	// Remove subject from teacher
 	g.DELETE("/:id/mysubject", func(c echo.Context) error {
 		var req struct {
 			IDs []uint `json:"ids"`
@@ -104,15 +131,13 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.NoContent(http.StatusOK)
-	})
+	}, middleware.Permit(0))
 
-	// AI Everlute path
 	g.POST("/aieverlute", func(c echo.Context) error {
-
 		err := tEverlute.Everlute()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.NoContent(http.StatusOK)
-	})
+	}, middleware.Permit(0))
 }

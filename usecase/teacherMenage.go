@@ -78,10 +78,22 @@ func (u *TeacherMg) Listing(search string, page, perPage int) ([]entities.Teache
 func (u *TeacherMg) Delete(id uint) error {
 	return u.teacherRepo.Delete(id)
 }
+
+func (u *TeacherMg) DeleteByAuthID(authID uint) error {
+	return u.teacherRepo.DeleteByAuthID(authID)
+}
 func (u *TeacherMg) EditPreference(updates []repo.PreferenceUpdate) error {
 	return u.teacherRepo.UpdatePreference(updates)
 }
 
 func (u *TeacherMg) GetByID(teacherID uint) (*entities.Teacher, error) {
 	return u.teacherRepo.GetByID(teacherID)
+}
+
+func (u *TeacherMg) Update(id uint, name, resume string) (*entities.Teacher, error) {
+	updated := &entities.Teacher{
+		Name:   name,
+		Resume: resume,
+	}
+	return u.teacherRepo.Update(id, updated)
 }

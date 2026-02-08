@@ -103,13 +103,13 @@ func (t *TeacherEverlute) Everlute() error {
 			if len(subjectsEvuList) == 0 {
 				break
 			}
-			fmt.Println("len subjectsEvuList before: %d, n : %d", len(subjectsEvuList), n)
+			//fmt.Println("len subjectsEvuList before: %d, n : %d", len(subjectsEvuList), n)
 			aiRes, err := t.everluteAi(teacher, subjectsEvuList[:n])
 			if err != nil {
 				return err
 			}
 			for _, ev := range aiRes.Evaluation {
-				fmt.Println("id: %v, adtitude: %v", ev.ID, ev.Adtritud)
+				//fmt.Println("id: %v, adtitude: %v", ev.ID, ev.Adtritud)
 				toMySubject = append(toMySubject, entities.TeacherMySubject{
 					SubjectID:  uint(ev.ID),
 					Preference: ev.Adtritud,
@@ -162,6 +162,9 @@ Output schema:
 	//fmt.Printf("rrrrrrrrr%+v\n", respBody)
 	if errAi != nil {
 		return nil, errAi
+	}
+	if respBody == nil || len(respBody.Choices) == 0 {
+		return nil, fmt.Errorf("AI agent returned no choices")
 	}
 
 	var res dto.EvaluationResponse

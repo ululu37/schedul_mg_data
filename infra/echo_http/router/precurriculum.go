@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"scadulDataMono/domain/entities"
+	"scadulDataMono/infra/echo_http/middleware"
 	"scadulDataMono/usecase"
 	"strconv"
 
@@ -11,7 +12,6 @@ import (
 )
 
 func RegisterPreCurriculumRoutes(e *echo.Echo, uc *usecase.PreCurriculum) {
-
 	g := e.Group("/precurriculum")
 
 	g.POST("", func(c echo.Context) error {
@@ -26,7 +26,7 @@ func RegisterPreCurriculumRoutes(e *echo.Echo, uc *usecase.PreCurriculum) {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, map[string]any{"id": id})
-	})
+	}, middleware.Permit(0))
 
 	g.GET("", func(c echo.Context) error {
 		search := c.QueryParam("search")
@@ -38,7 +38,7 @@ func RegisterPreCurriculumRoutes(e *echo.Echo, uc *usecase.PreCurriculum) {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, map[string]any{"data": list, "count": count})
-	})
+	}, middleware.Permit(0, 1))
 
 	g.GET("/:id", func(c echo.Context) error {
 		id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -47,7 +47,7 @@ func RegisterPreCurriculumRoutes(e *echo.Echo, uc *usecase.PreCurriculum) {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, data)
-	})
+	}, middleware.Permit(0, 1))
 
 	g.PUT("/:id", func(c echo.Context) error {
 		id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -62,21 +62,19 @@ func RegisterPreCurriculumRoutes(e *echo.Echo, uc *usecase.PreCurriculum) {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, updated)
-	})
+	}, middleware.Permit(0))
 
 	g.DELETE("/:id", func(c echo.Context) error {
-
 		id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 		if err := uc.Delete(uint(id)); err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.NoContent(http.StatusOK)
-	})
-	// Add subject to PreCurriculum
+	}, middleware.Permit(0))
+
 	g.POST("/:id/subject", func(c echo.Context) error {
 		id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 		var req []struct {
-			//PreCurriculumID uint   `json:"precurriculum_id"`
 			SubjectName string `json:"subject_name"`
 			Credit      int    `json:"credit"`
 		}
@@ -98,9 +96,8 @@ func RegisterPreCurriculumRoutes(e *echo.Echo, uc *usecase.PreCurriculum) {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.NoContent(http.StatusOK)
-	})
+	}, middleware.Permit(0))
 
-	// Remove subject from PreCurriculum
 	g.DELETE("/subject/:id", func(c echo.Context) error {
 		id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 		err := uc.RemoveSubject(uint(id))
@@ -108,5 +105,5 @@ func RegisterPreCurriculumRoutes(e *echo.Echo, uc *usecase.PreCurriculum) {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.NoContent(http.StatusOK)
-	})
+	}, middleware.Permit(0))
 }

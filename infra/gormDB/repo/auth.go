@@ -65,3 +65,27 @@ func (a *AuthRepo) DeleteByID(id uint) error {
 	}
 	return nil
 }
+
+func (a *AuthRepo) Listing(search string, page, perPage int) ([]entities.Auth, int64, error) {
+	var list []entities.Auth
+	var count int64
+	q := a.DB.Model(&entities.Auth{})
+
+	if search != "" {
+		q = q.Where("username LIKE ? OR human_type LIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+
+	if err := q.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if page > 0 && perPage > 0 {
+		offset := (page - 1) * perPage
+		q = q.Limit(perPage).Offset(offset)
+	}
+
+	if err := q.Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, count, nil
+}

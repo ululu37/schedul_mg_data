@@ -72,3 +72,11 @@ func (r *SubjectRepo) Listing(search string, page, perPage int) ([]entities.Subj
 	}
 	return list, count, nil
 }
+
+func (r *SubjectRepo) GetByID(id uint) (*entities.Subject, error) {
+	sub := &entities.Subject{}
+	if err := r.DB.First(sub, id).Error; err != nil {
+		return nil, err
+	}
+	return sub, nil
+}

@@ -4,11 +4,11 @@ type Student struct {
 	ID           uint `gorm:"primaryKey"`
 	AuthID       uint
 	Name         string `gorm:"size:200"`
-	CurriculumID uint
+	CurriculumID *uint
 	Year         int
-	ClassroomID  uint
+	ClassroomID  *uint
 
-	Auth       Auth       `gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE;"`
-	Curriculum Curriculum `gorm:"foreignKey:CurriculumID;references:ID"`
-	Classroom  Classroom
+	Auth       Auth       `gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"-"`
+	Curriculum Curriculum `gorm:"foreignKey:CurriculumID;references:ID" json:"-"`
+	Classroom  Classroom  `gorm:"foreignKey:ClassroomID;references:ID" json:"-"`
 }

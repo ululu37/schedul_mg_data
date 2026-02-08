@@ -32,3 +32,7 @@ func (s *SubjectMg) Listing(search string, page, perPage int) ([]entities.Subjec
 
 	return s.SubjectRepo.Listing(search, page, perPage) // Updated to use SubjectRepo
 }
+
+func (s *SubjectMg) GetByID(id uint) (*entities.Subject, error) {
+	return s.SubjectRepo.GetByID(id)
+}

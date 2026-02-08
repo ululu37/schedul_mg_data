@@ -17,6 +17,7 @@ func LoadConfig() Config {
 		Database: GetDatabaseEnv(),
 		JWT:      GetJWTEnv(),
 		Server:   GetServerEnv(),
+		AiAgent:  GetAiAgentEnv(),
 	}
 }
 
@@ -56,5 +57,20 @@ func GetDatabaseEnv() Database {
 		Port:     get("DB_PORT"),
 		SSLMode:  get("DB_SSLMODE"),
 		Schema:   get("DB_SCHEMA"),
+	}
+}
+
+func GetAiAgentEnv() AiAgent {
+	get := func(key string) string {
+		val := os.Getenv(key)
+		if val == "" {
+			log.Fatalf("❌ %s invalid", key)
+		}
+		return val
+	}
+
+	return AiAgent{
+		ApiKey: get("AI_AGENT_API_KEY"),
+		Url:    get("AI_AGENT_URL"),
 	}
 }

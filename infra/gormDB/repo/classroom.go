@@ -1,9 +1,8 @@
 package repo
 
 import (
-	"strconv"
-
 	"scadulDataMono/domain/entities"
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -25,7 +24,9 @@ func (r *ClassroomRepo) Update(id uint, updated *entities.Classroom) (*entities.
 		return nil, err
 	}
 
-	c.TeacherID = updated.TeacherID
+	c.Name = updated.Name
+	c.PreCurriculumID = updated.PreCurriculumID
+	c.CurriculumID = updated.CurriculumID
 	c.Year = updated.Year
 
 	if err := r.DB.Save(c).Error; err != nil {
@@ -45,29 +46,54 @@ func (r *ClassroomRepo) Delete(id uint) error {
 	return nil
 }
 
-// Listing searches by classroom year or teacher name
+// Listing searches by Name, PreCurriculum Name, Curriculum Name, or Year
 func (r *ClassroomRepo) Listing(search string, page, perPage int) ([]entities.Classroom, int64, error) {
 	var list []entities.Classroom
 	var count int64
-	q := r.DB.Model(&entities.Classroom{}).Preload("Teacher")
+
+	// Start with base query
+	q := r.DB.Model(&entities.Classroom{}).
+		Joins("LEFT JOIN pre_curriculums ON pre_curriculums.id = classrooms.pre_curriculum_id").
+		Joins("LEFT JOIN curriculums ON curriculums.id = classrooms.curriculum_id")
+
 	if search != "" {
 		like := "%" + search + "%"
-		if id, err := strconv.ParseUint(search, 10, 64); err == nil {
-			q = q.Where("year = ? OR teacher_id = ?", id, id)
-		} else {
-			q = q.Joins("LEFT JOIN teachers ON teachers.id = classrooms.teacher_id").Where("teachers.name LIKE ?", like)
+
+		// Search in Classroom Name, PreCurriculum Name, Curriculum Name
+		searchQuery := "classrooms.name LIKE ? OR pre_curriculums.name LIKE ? OR curriculums.name LIKE ?"
+		args := []interface{}{like, like, like}
+
+		// Also search in Year if search is numeric
+		if year, err := strconv.Atoi(search); err == nil {
+			searchQuery += " OR classrooms.year = ?"
+			args = append(args, year)
 		}
+
+		q = q.Where(searchQuery, args...)
 	}
+
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
-	offset := 0
+
+	// Apply paging
 	if page > 0 && perPage > 0 {
-		offset = (page - 1) * perPage
+		offset := (page - 1) * perPage
 		q = q.Limit(perPage).Offset(offset)
 	}
-	if err := q.Find(&list).Error; err != nil {
+
+	// Preload relations for the final list
+	if err := q.Preload("PreCurriculum").Preload("Curriculum").Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
+
 	return list, count, nil
+}
+
+func (r *ClassroomRepo) GetByID(id uint) (*entities.Classroom, error) {
+	c := &entities.Classroom{}
+	if err := r.DB.Preload("PreCurriculum").Preload("Curriculum").First(c, id).Error; err != nil {
+		return nil, err
+	}
+	return c, nil
 }
