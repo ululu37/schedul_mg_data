@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"fmt"
 	"scadulDataMono/domain/entities"
 	"strconv"
 
@@ -107,6 +108,7 @@ func (r *TeacherRepo) UpdatePreference(updates []PreferenceUpdate) error {
 	tx := r.DB.Begin()
 	for _, u := range updates {
 		res := tx.Model(&entities.TeacherMySubject{}).Where("id = ?", u.ID).Update("preference", u.Preference)
+		fmt.Println(u)
 		if res.Error != nil {
 			tx.Rollback()
 			return res.Error
@@ -122,13 +124,20 @@ func (r *TeacherRepo) UpdatePreference(updates []PreferenceUpdate) error {
 	return nil
 }
 
-// GetMySubject returns TeacherMySubject for a teacher with min preference, paginated
-func (r *TeacherRepo) GetMySubject(teacherID uint, minPreference int, page, perPage int) ([]entities.TeacherMySubject, int64, error) {
+// GetMySubject returns TeacherMySubject for a teacher with min preference, paginated, and optionally filtered by subject name
+func (r *TeacherRepo) GetMySubject(teacherID uint, minPreference int, search string, page, perPage int) ([]entities.TeacherMySubject, int64, error) {
 	var list []entities.TeacherMySubject
 	var count int64
 	q := r.DB.Model(&entities.TeacherMySubject{}).
 		Where("teacher_id = ? AND preference >= ?", teacherID, minPreference).
 		Preload("Subject")
+
+	// Add search filter by subject name if search string is provided
+	if search != "" {
+		q = q.Joins("JOIN subjects ON subjects.id = teacher_my_subjects.subject_id").
+			Where("subjects.name LIKE ?", "%"+search+"%")
+	}
+
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}

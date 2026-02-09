@@ -1,9 +1,11 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"scadulDataMono/domain/entities"
 	"scadulDataMono/infra/echo_http/middleware"
+	"scadulDataMono/infra/gormDB/repo"
 	"scadulDataMono/usecase"
 	"strconv"
 
@@ -86,9 +88,10 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 
 	g.GET("/:id/mysubject", func(c echo.Context) error {
 		teacherID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+		search := c.QueryParam("search")
 		page, _ := strconv.Atoi(c.QueryParam("page"))
 		perPage, _ := strconv.Atoi(c.QueryParam("perpage"))
-		list, count, err := uc.GetMySubject(uint(teacherID), 1, page, perPage)
+		list, count, err := uc.GetMySubject(uint(teacherID), 1, search, page, perPage)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
@@ -114,6 +117,31 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 		}
 		err := uc.AddMySubject(uint(teacherID), mySubjects)
 		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return c.NoContent(http.StatusOK)
+	}, middleware.Permit(0))
+
+	g.PUT("/mysubject/preference", func(c echo.Context) error {
+		var req []struct {
+			TeacherMySubjectID uint `json:"teacher_mysubject_id"`
+			Preference         int  `json:"preference"`
+		}
+		if err := c.Bind(&req); err != nil {
+			return c.JSON(http.StatusBadRequest, err.Error())
+		}
+		fmt.Println(req)
+
+		// Import the repo package for PreferenceUpdate type
+		updates := make([]repo.PreferenceUpdate, len(req))
+		for i, r := range req {
+			updates[i] = repo.PreferenceUpdate{
+				ID:         r.TeacherMySubjectID,
+				Preference: r.Preference,
+			}
+		}
+
+		if err := uc.EditPreference(updates); err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.NoContent(http.StatusOK)

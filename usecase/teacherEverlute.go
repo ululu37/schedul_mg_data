@@ -63,7 +63,7 @@ func (t *TeacherEverlute) Everlute() error {
 		mysubject := []entities.TeacherMySubject{}
 		for p := 1; ; p++ {
 
-			MysDB, _, err := t.teacherMg.GetMySubject(teacher.ID, -2, 1, 100)
+			MysDB, _, err := t.teacherMg.GetMySubject(teacher.ID, -2, "", 1, 100)
 			if len(MysDB) == 0 {
 				break
 			}
@@ -159,7 +159,7 @@ Output schema:
 		},
 	},
 	)
-	//fmt.Printf("rrrrrrrrr%+v\n", respBody)
+
 	if errAi != nil {
 		return nil, errAi
 	}
@@ -173,9 +173,6 @@ Output schema:
 	if errJsonEncode != nil {
 		return nil, errJsonEncode
 	}
-	// for _, ev := range res.Evaluation {
-	// 	fmt.Printf("subject_id=%d aptitude=%d\n", ev.ID, ev.Adtritud)
-	// }
-	fmt.Printf("-----------")
+
 	return &res, nil
 }
