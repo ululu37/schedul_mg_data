@@ -1,12 +1,12 @@
 package dto
 
 type Passport struct {
-	Token   string
-	Payload PayLoad
+	Token   string  `json:"token"`
+	Payload PayLoad `json:"payload"`
 }
 
 type PayLoad struct {
-	ID        uint
-	Role      int
-	HumanType string
+	ID        uint   `json:"id"`
+	Role      int    `json:"role"`
+	HumanType string `json:"human_type"`
 }

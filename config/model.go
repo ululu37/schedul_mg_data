@@ -22,7 +22,8 @@ type JWT struct {
 }
 
 type Server struct {
-	Port string
+	Port       string
+	CorsOrigin string
 }
 
 type AiAgent struct {

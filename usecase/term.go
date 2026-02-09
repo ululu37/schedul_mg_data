@@ -18,12 +18,8 @@ func (u *Term) Create(name string) (uint, error) {
 	return u.Repo.Create(term)
 }
 
-func (u *Term) Listing(search string, page, perPage int) ([]entities.Term, int64, error) {
-	return u.Repo.Listing(search, page, perPage)
-}
-
-func (u *Term) GetByID(id uint) (*entities.Term, error) {
-	return u.Repo.GetByID(id)
+func (u *Term) Listing() ([]entities.Term, error) {
+	return u.Repo.Listing()
 }
 
 func (u *Term) Update(id uint, name string) (*entities.Term, error) {

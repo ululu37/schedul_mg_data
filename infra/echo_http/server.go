@@ -1,12 +1,14 @@
 package echohttp
 
 import (
+	"net/http"
 	"scadulDataMono/config"
 
 	router "scadulDataMono/infra/echo_http/router"
 	"scadulDataMono/usecase"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 type echoServer struct {
@@ -57,12 +59,20 @@ func NewEchoServer(config *config.Config,
 func (s *echoServer) Start() {
 	s.app = echo.New()
 
+	// CORS middleware
+	s.app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins:     []string{s.config.Server.CorsOrigin},
+		AllowMethods:     []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete, http.MethodOptions},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowCredentials: true,
+	}))
+
 	// Register PreCurriculum routes
 	router.RegisterPreCurriculumRoutes(s.app, s.preCurriculumUsecase)
 	router.RegisterTeacherRoutes(s.app, s.teacherMgUsecase, s.teacherEverlute)
 	router.RegisterTermRoutes(s.app, s.termUsecase)
 	router.RegisterStudentRoutes(s.app, s.studentMg)
-	router.RegisterSubjectRoutes(s.app, s.subjectUsecase)
+	//router.RegisterSubjectRoutes(s.app, s.subjectUsecase)
 	router.RegisterClassroomRoutes(s.app, s.classroomMg)
 	router.RegisterCurriculumRoutes(s.app, s.curriculumMg)
 	router.RegisterScadulStudentRoutes(s.app, s.scadulStudentMg)

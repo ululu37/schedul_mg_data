@@ -1,18 +1,18 @@
 package entities
 
 type PreCurriculum struct {
-	ID   uint   `gorm:"primaryKey"`
-	Name string `gorm:"size:200"`
+	ID   uint   `gorm:"primaryKey" json:"id"`
+	Name string `gorm:"size:200" json:"name"`
 
-	SubjectInPreCurriculum []SubjectInPreCurriculum `gorm:"foreignKey:PreCurriculumID;"`
+	SubjectInPreCurriculum []SubjectInPreCurriculum `gorm:"foreignKey:PreCurriculumID;" json:"subject_in_pre_curriculums"`
 }
 
 type SubjectInPreCurriculum struct {
-	ID              uint `gorm:"primaryKey"`
-	PreCurriculumID uint
-	SubjectID       uint
-	Credit          int
-	Subject         Subject
+	ID              uint    `gorm:"primaryKey" json:"id"`
+	PreCurriculumID uint    `json:"pre_curriculum_id"`
+	SubjectID       uint    `json:"subject_id"`
+	Credit          int     `json:"credit"`
+	Subject         Subject `gorm:"foreignKey:SubjectID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"-"`
 
 	PreCurriculum PreCurriculum `gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"-"`
 }

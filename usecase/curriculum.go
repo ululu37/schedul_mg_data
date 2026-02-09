@@ -13,8 +13,8 @@ func NewCurriculumMg(repo *repo.CurriculumRepo) *CurriculumMg {
 	return &CurriculumMg{CurriculumRepo: repo}
 }
 
-func (u *CurriculumMg) Create(name string) (uint, error) {
-	newC := &entities.Curriculum{Name: name}
+func (u *CurriculumMg) Create(name string, preCurriculumID uint) (uint, error) {
+	newC := &entities.Curriculum{Name: name, PreCurriculumID: preCurriculumID}
 	return u.CurriculumRepo.Create(newC)
 }
 
@@ -35,11 +35,20 @@ func (u *CurriculumMg) GetByID(id uint, termName string) (*entities.Curriculum, 
 	return u.CurriculumRepo.GetByID(id, termName)
 }
 
-func (u *CurriculumMg) AddSubject(curriculumID uint, subjects []entities.SubjectInCurriculum) error {
-	for i := range subjects {
-		subjects[i].CurriculumID = curriculumID
+func (u *CurriculumMg) AddSubject(curriculumID uint, subjectPreIDs []uint) error {
+	var subjects []entities.SubjectInCurriculum
+	for _, id := range subjectPreIDs {
+		subjects = append(subjects, entities.SubjectInCurriculum{
+			CurriculumID:             curriculumID,
+			SubjectInPreCurriculumID: id,
+			TermID:                   nil,
+		})
 	}
 	return u.CurriculumRepo.AddSubject(subjects)
+}
+
+func (u *CurriculumMg) EditSubjectTerm(updates []repo.SubjectTermUpdate) error {
+	return u.CurriculumRepo.UpdateTerm(updates)
 }
 
 func (u *CurriculumMg) RemoveSubject(ids []uint) error {

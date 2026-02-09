@@ -27,26 +27,11 @@ func RegisterTermRoutes(e *echo.Echo, uc *usecase.Term) {
 	}, middleware.Permit(0))
 
 	g.GET("", func(c echo.Context) error {
-		search := c.QueryParam("search")
-		page, _ := strconv.Atoi(c.QueryParam("page"))
-		perPage, _ := strconv.Atoi(c.QueryParam("perpage"))
-		list, count, err := uc.Listing(search, page, perPage)
+		list, err := uc.Listing()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
-		return c.JSON(http.StatusOK, map[string]any{"data": list, "count": count})
-	}, middleware.Permit(0, 1))
-
-	g.GET("/:id", func(c echo.Context) error {
-		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, "invalid id")
-		}
-		term, err := uc.GetByID(uint(id))
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, err.Error())
-		}
-		return c.JSON(http.StatusOK, term)
+		return c.JSON(http.StatusOK, list)
 	}, middleware.Permit(0, 1))
 
 	g.PUT("/:id", func(c echo.Context) error {

@@ -92,7 +92,7 @@ func (r *ClassroomRepo) Listing(search string, page, perPage int) ([]entities.Cl
 
 func (r *ClassroomRepo) GetByID(id uint) (*entities.Classroom, error) {
 	c := &entities.Classroom{}
-	if err := r.DB.Preload("PreCurriculum").Preload("Curriculum").First(c, id).Error; err != nil {
+	if err := r.DB.Preload("PreCurriculum").Preload("Curriculum").Preload("Student").First(c, id).Error; err != nil {
 		return nil, err
 	}
 	return c, nil

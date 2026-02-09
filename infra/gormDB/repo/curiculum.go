@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"fmt"
 	"scadulDataMono/domain/entities"
 
 	"gorm.io/gorm"
@@ -81,8 +82,8 @@ func (r *CurriculumRepo) GetByID(id uint, termID string) (*entities.Curriculum, 
 }
 
 type SubjectTermUpdate struct {
-	ID     uint
-	TermID uint
+	ID     uint  `json:"id"`
+	TermID *uint `json:"term_id"`
 }
 
 func (r *CurriculumRepo) AddSubject(subjects []entities.SubjectInCurriculum) error {
@@ -115,6 +116,7 @@ func (r *CurriculumRepo) UpdateTerm(updates []SubjectTermUpdate) error {
 	}
 	tx := r.DB.Begin()
 	for _, u := range updates {
+		fmt.Println("Update term_id", u.TermID, "for subject_in_curriculum_id", u.ID)
 		res := tx.Model(&entities.SubjectInCurriculum{}).Where("id = ?", u.ID).Update("term_id", u.TermID)
 		if res.Error != nil {
 			tx.Rollback()

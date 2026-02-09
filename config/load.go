@@ -27,8 +27,15 @@ func GetServerEnv() Server {
 		port = "80"
 	}
 	port = ":" + port
+
+	corsOrigin := os.Getenv("CORS_ORIGIN")
+	if corsOrigin == "" {
+		corsOrigin = "http://localhost:3000"
+	}
+
 	return Server{
-		Port: port,
+		Port:       port,
+		CorsOrigin: corsOrigin,
 	}
 }
 func GetJWTEnv() JWT {

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"errors"
+	"fmt"
 	dto "scadulDataMono/domain/DTO"
 	"scadulDataMono/domain/entities"
 	"scadulDataMono/infra/gormDB/repo"
@@ -23,6 +24,8 @@ func NewAuth(authRepo *repo.AuthRepo, studentMg *StudentMg, teacherMg *TeacherMg
 }
 
 func (a *Auth) Login(username string, password string) (*dto.Passport, error) {
+	fmt.Println("username", username)
+	fmt.Println("password", password)
 	auth, err := a.authRepo.GetByUsername(
 		username,
 	)

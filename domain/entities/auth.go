@@ -1,9 +1,9 @@
 package entities
 
 type Auth struct {
-	ID        uint   `gorm:"primaryKey"`
+	ID        uint   `gorm:"primaryKey" json:"id"`
 	Username  string `gorm:"size:200;uniqueIndex;not null" json:"username"`
-	Password  string `gorm:"size:200;not null"`
+	Password  string `gorm:"size:200;not null" json:"password"`
 	HumanType string `gorm:"size:1" json:"human_type"` // 't' for teacher, 's' for student, '' for other
 	Role      int    `gorm:"not null" json:"role"`     // 0: normal user, 1: admin
 }

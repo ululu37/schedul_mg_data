@@ -63,7 +63,7 @@ func (r *StudentRepo) DeleteByAuthID(authID uint) error {
 	return nil
 }
 
-// Listing searches by student name, student id, curriculum name, pre-curiculum name, or classroom teacher name
+// Listing searches by student name, student id, curriculum name, or pre-curiculum name
 func (r *StudentRepo) Listing(search string, page, perPage int) ([]entities.Student, int64, error) {
 	var list []entities.Student
 	var count int64
@@ -75,14 +75,13 @@ func (r *StudentRepo) Listing(search string, page, perPage int) ([]entities.Stud
 		Joins("LEFT JOIN subject_in_curriculums ON subject_in_curriculums.curriculum_id = curriculums.id").
 		Joins("LEFT JOIN subject_in_pre_curriculums ON subject_in_pre_curriculums.id = subject_in_curriculums.subject_in_pre_curriculum_id").
 		Joins("LEFT JOIN pre_curriculums ON pre_curriculums.id = subject_in_pre_curriculums.pre_curriculum_id").
-		Joins("LEFT JOIN classrooms ON classrooms.id = students.classroom_id").
-		Joins("LEFT JOIN teachers ON teachers.id = classrooms.teacher_id")
+		Joins("LEFT JOIN classrooms ON classrooms.id = students.classroom_id")
 
 	if strings.TrimSpace(search) != "" {
 		if id, err := strconv.ParseUint(search, 10, 64); err == nil {
-			q = q.Where("students.id = ? OR students.name LIKE ? OR curriculums.name LIKE ? OR pre_curriculums.name LIKE ? OR teachers.name LIKE ?", id, "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+			q = q.Where("students.id = ? OR students.name LIKE ? OR curriculums.name LIKE ? OR pre_curriculums.name LIKE ?", id, "%"+search+"%", "%"+search+"%", "%"+search+"%")
 		} else {
-			q = q.Where("students.name LIKE ? OR curriculums.name LIKE ? OR pre_curriculums.name LIKE ? OR teachers.name LIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+			q = q.Where("students.name LIKE ? OR curriculums.name LIKE ? OR pre_curriculums.name LIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 		}
 	}
 

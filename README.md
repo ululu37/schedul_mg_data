@@ -10,116 +10,228 @@ go run infra/gormDB/migration/migration.go
 go run main.go
 ```
 
+## Domain Entities
+
+### Core Entities
+- **Auth**:
+  - `ID`: uint (Primary Key)
+  - `Username`: string (Unique)
+  - `Password`: string
+  - `HumanType`: string ('t': Teacher, 's': Student, '': Other)
+  - `Role`: int (0: User, 1: Admin)
+- **Teacher**:
+  - `ID`: uint (Primary Key)
+  - `Name`: string
+  - `Resume`: text
+  - `AuthID`: uint (Foreign Key to Auth)
+- **Student**:
+  - `ID`: uint (Primary Key)
+  - `AuthID`: uint (Foreign Key to Auth)
+  - `Name`: string
+  - `CurriculumID`: *uint (Foreign Key to Curriculum)
+  - `Year`: int
+  - `ClassroomID`: *uint (Foreign Key to Classroom)
+- **Subject**:
+  - `ID`: uint (Primary Key)
+  - `Name`: string
+- **Term**:
+  - `ID`: uint (Primary Key)
+  - `Name`: string
+- **Classroom**:
+  - `ID`: uint (Primary Key)
+  - `Name`: string
+  - `PreCurriculumID`: *uint (Foreign Key to PreCurriculum)
+  - `CurriculumID`: *uint (Foreign Key to Curriculum)
+  - `Year`: *int
+
+### Curriculum Management
+- **PreCurriculum**:
+  - `ID`: uint (Primary Key)
+  - `Name`: string
+- **SubjectInPreCurriculum**:
+  - `ID`: uint (Primary Key)
+  - `PreCurriculumID`: uint (Foreign Key to PreCurriculum)
+  - `SubjectID`: uint (Foreign Key to Subject)
+  - `Credit`: int
+- **Curriculum**:
+  - `ID`: uint (Primary Key)
+  - `Name`: string
+  - `PreCurriculumID`: uint (Foreign Key to PreCurriculum)
+- **SubjectInCurriculum**:
+  - `ID`: uint (Primary Key)
+  - `CurriculumID`: uint (Foreign Key to Curriculum)
+  - `SubjectInPreCurriculumID`: uint (Foreign Key to SubjectInPreCurriculum)
+  - `TermID`: *uint (Foreign Key to Term)
+
+### Scheduling
+- **ScadulTeacher**:
+  - `ID`: uint (Primary Key)
+  - `TeacherID`: uint (Foreign Key to Teacher)
+  - `UseIn`: string (YYYY/term)
+- **SubjectInScadulTeacher**:
+  - `ID`: uint (Primary Key)
+  - `ScadulTeacherID`: uint (Foreign Key to ScadulTeacher)
+  - `TeacherID`: uint (Foreign Key to Teacher)
+  - `SubjectID`: uint (Foreign Key to Subject)
+  - `Order`: int
+- **ScadulStudent**:
+  - `ID`: uint (Primary Key)
+  - `ClassroomID`: uint (Foreign Key to Classroom)
+  - `UseIn`: string (YYYY/term)
+- **SubjectInScadulStudent**:
+  - `ID`: uint (Primary Key)
+  - `ScadulStudentID`: uint (Foreign Key to ScadulStudent)
+  - `TeacherID`: uint (Foreign Key to Teacher)
+  - `SubjectID`: uint (Foreign Key to Subject)
+  - `Order`: int
+
+### Teacher Management
+- **TeacherMySubject**:
+  - `ID`: uint (Primary Key)
+  - `TeacherID`: uint (Foreign Key to Teacher)
+  - `SubjectID`: uint (Foreign Key to Subject)
+  - `Preference`: int
+
 ## API Endpoints Summary
 
 ### Auth (`/auth`)
-- `POST {{url}}/auth/login` - Login
-  - Body: `{"username": "admin", "password": "password"}`
-- `GET {{url}}/auth` - List Users (Admin)
-- `PUT {{url}}/auth/:id` - Update User (Admin)
-  - Body: `{"username": "...", "human_type": "...", "role": ...}`
-- `DELETE {{url}}/auth/:id` - Delete User (Admin)
-  - Query: `?humantype=s` (s: student, t: teacher)
+- `post {{url}}/auth/login`
+  - body: `{"username": "admin", "password": "password"}`
+- `get {{url}}/auth?search=&page=1&perpage=100` (Admin)
+  - body: `{}`
+- `put {{url}}/auth/:id` (Admin)
+  - body: `{"username": "...", "human_type": "...", "role": ...}`
+- `delete {{url}}/auth/:id?humantype=s` (Admin)
+  - body: `{}`
 
 ### Teacher (`/teacher`)
-- `GET {{url}}/teacher/:id` - Get Teacher (Admin/User)
-- `POST {{url}}/teacher` - Create Teacher (Admin)
-  - Body: `{"name": "...", "resume": "...", "username": "...", "password": "...", "role": 1}`
-- `GET {{url}}/teacher` - List Teachers (Admin/User)
-- `PUT {{url}}/teacher/:id` - Update Teacher (Admin)
-  - Body: `{"name": "...", "resume": "..."}`
-- `DELETE {{url}}/teacher/:id` - Delete Teacher (Admin)
-- `GET {{url}}/teacher/:id/mysubject` - View My Subjects (Admin/User)
-- `POST {{url}}/teacher/:id/mysubject` - Add Subjects (Admin)
-  - Body: `[{"subject_id": 1, "preference": 5}]`
-- `DELETE {{url}}/teacher/:id/mysubject` - Remove Subjects (Admin)
-  - Body: `{"ids": [1, 2]}`
-- `POST {{url}}/teacher/aieverlute` - AI Evaluation (Admin)
+- `get {{url}}/teacher/:id` (Admin/User)
+  - body: `{}`
+- `post {{url}}/teacher` (Admin)
+  - body: `{"name": "...", "resume": "...", "username": "...", "password": "...", "role": 1}`
+- `get {{url}}/teacher?search=&page=1&perpage=100` (Admin/User)
+  - body: `{}`
+- `put {{url}}/teacher/:id` (Admin)
+  - body: `{"name": "...", "resume": "..."}`
+- `delete {{url}}/teacher/:id` (Admin)
+  - body: `{}`
+- `get {{url}}/teacher/:id/mysubject?search=&page=1&perpage=100` (Admin/User)
+  - body: `{}`
+- `post {{url}}/teacher/:id/mysubject` (Admin)
+  - body: `[{"subject_id": 1, "preference": 5}]`
+- `delete {{url}}/teacher/:id/mysubject` (Admin)
+  - body: `{"ids": [1, 2]}`
+- `post {{url}}/teacher/aieverlute` (Admin)
+  - body: `{}`
 
 ### Student (`/student`)
-- `GET {{url}}/student` - List Students (Admin/User)
-- `POST {{url}}/student` - Create Student (Admin)
-  - Body: `{"name": "...", "curriculum_id": 1, "year": 2024, "classroom_id": 1, "username": "...", "password": "...", "role": 1}`
-- `GET {{url}}/student/:id` - Get Student (Admin/User)
-- `PUT {{url}}/student/:id` - Update Student (Admin)
-  - Body: `{"name": "...", "curriculum_id": 1, "year": 2024, "classroom_id": 1}`
-- `DELETE {{url}}/student/:id` - Delete Student (Admin)
+- `get {{url}}/student?search=&page=1&perpage=100` (Admin/User)
+  - body: `{}`
+- `post {{url}}/student` (Admin)
+  - body: `{"name": "...", "curriculum_id": 1, "year": 2024, "classroom_id": 1, "username": "...", "password": "...", "role": 1}`
+- `get {{url}}/student/:id` (Admin/User)
+  - body: `{}`
+- `put {{url}}/student/:id` (Admin)
+  - body: `{"name": "...", "curriculum_id": 1, "year": 2024, "classroom_id": 1}`
+- `delete {{url}}/student/:id` (Admin)
+  - body: `{}`
 
 ### Subject (`/subject`)
-- `GET {{url}}/subject` - List Subjects (Admin/User)
-- `POST {{url}}/subject` - Create Subjects (Admin)
-  - Body: `{"names": ["Math", "Science"]}`
-- `GET {{url}}/subject/:id` - Get Subject (Admin/User)
-- `PUT {{url}}/subject/:id` - Update Subject (Admin)
-  - Body: `{"name": "Math"}`
-- `DELETE {{url}}/subject/:id` - Delete Subject (Admin)
+- `get {{url}}/subject?search=&page=1&perpage=100` (Admin/User)
+  - body: `{}`
+- `post {{url}}/subject` (Admin)
+  - body: `{"names": ["Math", "Science"]}`
+- `get {{url}}/subject/:id` (Admin/User)
+  - body: `{}`
+- `put {{url}}/subject/:id` (Admin)
+  - body: `{"name": "Math"}`
+- `delete {{url}}/subject/:id` (Admin)
+  - body: `{}`
 
 ### Classroom (`/classroom`)
-- `GET {{url}}/classroom` - List Classrooms (Admin/User)
-  - Search: `ByName`, `ByPreCurriculumName`, `ByCurriculumName`, `ByYear`
-- `POST {{url}}/classroom` - Create Classroom (Admin)
-  - Body: `{"name": "Room 101", "pre_curriculum_id": 1, "curriculum_id": 2, "year": 2024}`
-- `GET {{url}}/classroom/:id` - Get Classroom (Admin/User)
-- `PUT {{url}}/classroom/:id` - Update Classroom (Admin)
-  - Body: `{"name": "Room 101 Updated", "pre_curriculum_id": 1, "curriculum_id": 2, "year": 2024}`
-- `DELETE {{url}}/classroom/:id` - Delete Classroom (Admin)
+- `get {{url}}/classroom?search=&page=1&perpage=100` (Admin/User)
+  - body: `{}`
+- `post {{url}}/classroom` (Admin)
+  - body: `{"name": "Room 101", "pre_curriculum_id": 1, "curriculum_id": 2, "year": 2024}`
+- `get {{url}}/classroom/:id` (Admin/User)
+  - body: `{}`
+- `put {{url}}/classroom/:id` (Admin)
+  - body: `{"name": "Room 101 Updated", "pre_curriculum_id": 1, "curriculum_id": 2, "year": 2024}`
+- `delete {{url}}/classroom/:id` (Admin)
+  - body: `{}`
 
 ### Term (`/term`)
-- `GET {{url}}/term` - List Terms (Admin/User)
-- `POST {{url}}/term` - Create Term (Admin)
-  - Body: `{"name": "Term 1"}`
-- `GET {{url}}/term/:id` - Get Term (Admin/User)
-- `PUT {{url}}/term/:id` - Update Term (Admin)
-  - Body: `{"name": "Term 1 Updated"}`
-- `DELETE {{url}}/term/:id` - Delete Term (Admin)
+- `get {{url}}/term` (Admin/User)
+  - body: `{}`
+- `post {{url}}/term` (Admin)
+  - body: `{"name": "Term 1"}`
+- `put {{url}}/term/:id` (Admin)
+  - body: `{"name": "Term 1 Updated"}`
+- `delete {{url}}/term/:id` (Admin)
+  - body: `{}`
 
 ### Curriculum (`/curriculum`)
-- `GET {{url}}/curriculum` - List Curriculums (Admin/User)
-- `POST {{url}}/curriculum` - Create Curriculum (Admin)
-  - Body: `{"name": "..."}`
-- `GET {{url}}/curriculum/:id` - Get Curriculum (Admin/User)
-- `PUT {{url}}/curriculum/:id` - Update Curriculum (Admin)
-  - Body: `{"name": "..."}`
-- `DELETE {{url}}/curriculum/:id` - Delete Curriculum (Admin)
-- `POST {{url}}/curriculum/:id/subject` - Add Subject to Curriculum (Admin)
-  - Body: `[{"subject_in_pre_curriculum_id": 1, "term_id": 1}]`
-- `DELETE {{url}}/curriculum/subject` - Remove Subjects (Admin)
-  - Body: `{"ids": [1]}`
+- `get {{url}}/curriculum?search=&page=1&perpage=100` (Admin/User)
+  - body: `{}`
+- `post {{url}}/curriculum` (Admin)
+  - body: `{"name": "...", "pre_curriculum_id": 1}`
+- `get {{url}}/curriculum/:id` (Admin/User)
+  - body: `{}`
+- `put {{url}}/curriculum/:id` (Admin)
+  - body: `{"name": "..."}`
+- `delete {{url}}/curriculum/:id` (Admin)
+  - body: `{}`
+- `post {{url}}/curriculum/:id/subject` (Admin)
+  - body: `[1, 2, 3]`
+- `delete {{url}}/curriculum/subject` (Admin)
+  - body: `{"ids": [1]}`
+- `patch {{url}}/curiculum/subject/term` (Admin)
+  - body: `[{"id": 1, "term_id": 1}, {"id": 2, "term_id": null}]`
 
 ### PreCurriculum (`/precurriculum`)
-- `GET {{url}}/precurriculum` - List PreCurriculums (Admin/User)
-- `POST {{url}}/precurriculum` - Create PreCurriculum (Admin)
-  - Body: `{"name": "..."}`
-- `GET {{url}}/precurriculum/:id` - Get PreCurriculum (Admin/User)
-- `PUT {{url}}/precurriculum/:id` - Update PreCurriculum (Admin)
-  - Body: `{"name": "..."}`
-- `DELETE {{url}}/precurriculum/:id` - Delete PreCurriculum (Admin)
-- `POST {{url}}/precurriculum/:id/subject` - Add Subject (Admin)
-  - Body: `[{"subject_name": "Math", "credit": 3}]`
-- `DELETE {{url}}/precurriculum/subject/:id` - Remove Subject (Admin)
+- `get {{url}}/precurriculum?search=&page=1&perpage=100` (Admin/User)
+  - body: `{}`
+- `post {{url}}/precurriculum` (Admin)
+  - body: `{"name": "..."}`
+- `get {{url}}/precurriculum/:id` (Admin/User)
+  - body: `{}`
+- `put {{url}}/precurriculum/:id` (Admin)
+  - body: `{"name": "..."}`
+- `delete {{url}}/precurriculum/:id` (Admin)
+  - body: `{}`
+- `post {{url}}/precurriculum/:id/subject` (Admin)
+  - body: `[{"subject_name": "Math", "credit": 3}]`
+- `delete {{url}}/precurriculum/subject/:id` (Admin)
+  - body: `{}`
 
 ### Scadul Student (`/scadulstudent`)
-- `GET {{url}}/scadulstudent` - List (Admin/User)
-- `POST {{url}}/scadulstudent` - Create (Admin)
-  - Body: `{"classroom_id": 1, "use_in": "2024/1"}`
-- `GET {{url}}/scadulstudent/:id` - Get (Admin/User)
-- `PUT {{url}}/scadulstudent/:id` - Update (Admin)
-  - Body: `{"classroom_id": 1, "use_in": "2024/1"}`
-- `DELETE {{url}}/scadulstudent/:id` - Delete (Admin)
-- `POST {{url}}/scadulstudent/:id/subject` - Add Subjects (Admin)
-  - Body: `[{"teacher_id": 1, "subject_id": 1, "order": 1}]`
-- `DELETE {{url}}/scadulstudent/subject` - Remove Subjects (Admin)
-  - Body: `{"ids": [1]}`
+- `get {{url}}/scadulstudent?search=&page=1&perpage=100` (Admin/User)
+  - body: `{}`
+- `post {{url}}/scadulstudent` (Admin)
+  - body: `{"classroom_id": 1, "use_in": "2024/1"}`
+- `get {{url}}/scadulstudent/:id` (Admin/User)
+  - body: `{}`
+- `put {{url}}/scadulstudent/:id` (Admin)
+  - body: `{"classroom_id": 1, "use_in": "2024/1"}`
+- `delete {{url}}/scadulstudent/:id` (Admin)
+  - body: `{}`
+- `post {{url}}/scadulstudent/:id/subject` (Admin)
+  - body: `[{"teacher_id": 1, "subject_id": 1, "order": 1}]`
+- `delete {{url}}/scadulstudent/subject` (Admin)
+  - body: `{"ids": [1]}`
 
 ### Scadul Teacher (`/scadulteacher`)
-- `GET {{url}}/scadulteacher` - List (Admin/User)
-- `POST {{url}}/scadulteacher` - Create (Admin)
-  - Body: `{"teacher_id": 1, "use_in": "2024/1"}`
-- `GET {{url}}/scadulteacher/:id` - Get (Admin/User)
-- `PUT {{url}}/scadulteacher/:id` - Update (Admin)
-  - Body: `{"teacher_id": 1, "use_in": "2024/1"}`
-- `DELETE {{url}}/scadulteacher/:id` - Delete (Admin)
-- `POST {{url}}/scadulteacher/:id/subject` - Add Subjects (Admin)
-  - Body: `[{"teacher_id": 1, "subject_id": 1, "order": 1}]`
-- `DELETE {{url}}/scadulteacher/subject` - Remove Subjects (Admin)
-  - Body: `{"ids": [1]}`
+- `get {{url}}/scadulteacher?search=&page=1&perpage=100` (Admin/User)
+  - body: `{}`
+- `post {{url}}/scadulteacher` (Admin)
+  - body: `{"teacher_id": 1, "use_in": "2024/1"}`
+- `get {{url}}/scadulteacher/:id` (Admin/User)
+  - body: `{}`
+- `put {{url}}/scadulteacher/:id` (Admin)
+  - body: `{"teacher_id": 1, "use_in": "2024/1"}`
+- `delete {{url}}/scadulteacher/:id` (Admin)
+  - body: `{}`
+- `post {{url}}/scadulteacher/:id/subject` (Admin)
+  - body: `[{"teacher_id": 1, "subject_id": 1, "order": 1}]`
+- `delete {{url}}/scadulteacher/subject` (Admin)
+  - body: `{"ids": [1]}`

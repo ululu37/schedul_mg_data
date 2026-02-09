@@ -2,8 +2,8 @@ package router
 
 import (
 	"net/http"
-	"scadulDataMono/domain/entities"
 	"scadulDataMono/infra/echo_http/middleware"
+	"scadulDataMono/infra/gormDB/repo"
 	"scadulDataMono/usecase"
 	"strconv"
 
@@ -15,12 +15,13 @@ func RegisterCurriculumRoutes(e *echo.Echo, uc *usecase.CurriculumMg) {
 
 	g.POST("", func(c echo.Context) error {
 		var req struct {
-			Name string `json:"name"`
+			Name            string `json:"name"`
+			PreCurriculumID uint   `json:"pre_curriculum_id"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
-		id, err := uc.Create(req.Name)
+		id, err := uc.Create(req.Name, req.PreCurriculumID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
@@ -85,22 +86,12 @@ func RegisterCurriculumRoutes(e *echo.Echo, uc *usecase.CurriculumMg) {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, "invalid id")
 		}
-		var req []struct {
-			SubjectInPreCurriculumID uint `json:"subject_in_pre_curriculum_id"`
-			TermID                   uint `json:"term_id"`
-		}
+		var req []uint
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 
-		var subjects []entities.SubjectInCurriculum
-		for _, r := range req {
-			subjects = append(subjects, entities.SubjectInCurriculum{
-				SubjectInPreCurriculumID: r.SubjectInPreCurriculumID,
-				TermID:                   r.TermID,
-			})
-		}
-		if err := uc.AddSubject(uint(id), subjects); err != nil {
+		if err := uc.AddSubject(uint(id), req); err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.NoContent(http.StatusOK)
@@ -114,6 +105,17 @@ func RegisterCurriculumRoutes(e *echo.Echo, uc *usecase.CurriculumMg) {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 		if err := uc.RemoveSubject(req.IDs); err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return c.NoContent(http.StatusOK)
+	}, middleware.Permit(0))
+
+	g.PATCH("/subject/term", func(c echo.Context) error {
+		var req []repo.SubjectTermUpdate
+		if err := c.Bind(&req); err != nil {
+			return c.JSON(http.StatusBadRequest, err.Error())
+		}
+		if err := uc.EditSubjectTerm(req); err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.NoContent(http.StatusOK)

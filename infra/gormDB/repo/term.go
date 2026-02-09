@@ -21,36 +21,12 @@ func (r *TermRepo) Create(term *entities.Term) (uint, error) {
 	return term.ID, nil
 }
 
-func (r *TermRepo) Listing(search string, page, perPage int) ([]entities.Term, int64, error) {
+func (r *TermRepo) Listing() ([]entities.Term, error) {
 	var list []entities.Term
-	var count int64
-	q := r.DB.Model(&entities.Term{})
-
-	if search != "" {
-		q = q.Where("name LIKE ?", "%"+search+"%")
-	}
-
-	if err := q.Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
-
-	if page > 0 && perPage > 0 {
-		offset := (page - 1) * perPage
-		q = q.Limit(perPage).Offset(offset)
-	}
-
-	if err := q.Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-	return list, count, nil
-}
-
-func (r *TermRepo) GetByID(id uint) (*entities.Term, error) {
-	term := &entities.Term{}
-	if err := r.DB.First(term, id).Error; err != nil {
+	if err := r.DB.Find(&list).Error; err != nil {
 		return nil, err
 	}
-	return term, nil
+	return list, nil
 }
 
 func (r *TermRepo) Update(id uint, updated *entities.Term) (*entities.Term, error) {
