@@ -1,14 +1,21 @@
 ## Migration
+```bash
+docker compose up -d
+```
 
 ```bash
 go run infra/gormDB/migration/migration.go   
 ```
-
+```bash
+insert into auths (username ,"password" ,"role" ,human_type) values ('admin','123456',0,'t');
+```
 ## Run
 
 ```bash
 go run main.go
 ```
+
+
 
 ## Domain Entities
 
