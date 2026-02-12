@@ -2,7 +2,6 @@ package gpt_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	dto "scadulDataMono/domain/DTO"
 	aiAgent "scadulDataMono/infra/Agent"
@@ -170,9 +169,9 @@ Output schema:
 	}
 
 	// ใช้งานต่อ
-	for _, ev := range res.Evaluation {
-		fmt.Printf("subject_id=%d aptitude=%d\n", ev.ID, ev.Adtritud)
-	}
+	// for _, ev := range res.Evaluation {
+	// 	fmt.Printf("subject_id=%d aptitude=%d\n", ev.ID, ev.Adtritude)
+	// }
 
 	//fmt.Printf("%s", respBody.Choices[0].Message.Content)
 	assert.NoError(t, err)

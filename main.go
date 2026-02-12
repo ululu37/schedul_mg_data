@@ -40,12 +40,13 @@ func main() {
 	termUsecase := usecase.NewTermUsecase(termRepo)
 	studentMg := usecase.NewStudentMg(studentRepo, authRepo)
 	classroomMg := usecase.NewClassroomMg(classroomRepo)
-	curriculumMg := usecase.NewCurriculumMg(curriculumRepo)
+	curriculumMg := usecase.NewCurriculumMg(curriculumRepo, preCurriculumRepo)
 	scadulStudentMg := usecase.NewScadulStudentMg(scadulStudentRepo)
 	scadulTeacherMg := usecase.NewScadulTeacherMg(scadulTeacherRepo)
+	scheduleUsecase := usecase.NewScheduleUsecase(teacherRepo, classroomRepo, scadulStudentRepo, scadulTeacherRepo)
 	auth := usecase.NewAuth(authRepo, studentMg, teacherMg)
 
 	// Start echo server
-	server := echohttp.NewEchoServer(&cfg, subjectMg, preCurriculum, teacherMg, teacherEverlute, termUsecase, studentMg, classroomMg, curriculumMg, scadulStudentMg, scadulTeacherMg, auth)
+	server := echohttp.NewEchoServer(&cfg, subjectMg, preCurriculum, teacherMg, teacherEverlute, termUsecase, studentMg, classroomMg, curriculumMg, scadulStudentMg, scadulTeacherMg, auth, scheduleUsecase)
 	server.Start()
 }

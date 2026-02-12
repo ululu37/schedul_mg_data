@@ -7,13 +7,13 @@ import (
 )
 
 type SchedulRes struct {
-	studentScheduls []entities.ScadulStudent
-	teacherScheduls []entities.ScadulTeacher
+	StudentScheduls []entities.ScadulStudent
+	TeacherScheduls []entities.ScadulTeacher
 }
 
 type TeacherAssign struct {
 	AllocatedHour int
-	Subjects      map[uint]SubjectAssign             //[SubjectInPreCurriculumID]SubjectAssign
+	Subjects      map[string]SubjectAssign           //[SubjectID-ClassroomID]SubjectAssign
 	MySubjects    map[uint]entities.TeacherMySubject //[SubjectID]
 }
 type SubjectAssign struct {
@@ -39,7 +39,8 @@ func AssignSubject(everageHour int, teacherAssign map[uint]TeacherAssign, classr
 
 	// เริ่มเเจกงาน
 	for _, cl := range classrooms {
-		for _, subject := range cl.PreCurriculum.SubjectInPreCurriculum {
+		for _, subjectInCurriculum := range cl.Curriculum.SubjectInCurriculum {
+			subject := subjectInCurriculum.SubjectInPreCurriculum
 			if !is_everage {
 				if _, ok := classroomAssign[fmt.Sprintf("%d-%d", cl.ID, subject.SubjectID)]; ok {
 					fmt.Println("skip", cl.ID, subject.SubjectID)
@@ -115,7 +116,8 @@ func AssignSubject(everageHour int, teacherAssign map[uint]TeacherAssign, classr
 
 					// Initialize the Subjects map if it's nil
 					//fmt.Println(cl.CurriculumID)
-					ta.Subjects[subject.SubjectID] = SubjectAssign{
+					key := fmt.Sprintf("%d-%d", subject.SubjectID, cl.ID)
+					ta.Subjects[key] = SubjectAssign{
 						SubjectID:   subject.SubjectID,
 						Credit:      subject.Credit,
 						ClassroomID: cl.ID,
@@ -149,6 +151,13 @@ func AssignSubject(everageHour int, teacherAssign map[uint]TeacherAssign, classr
 }
 
 func Can(teachers []entities.Teacher, classrooms []entities.Classroom) (SchedulRes, error) {
+	fmt.Println("classrooms", len(classrooms))
+	for _, cl := range classrooms {
+		fmt.Println("cl", cl.Name)
+		for i, subject := range cl.Curriculum.SubjectInCurriculum {
+			fmt.Printf("%d: %s\n", i, subject.SubjectInPreCurriculum.Subject.Name)
+		}
+	}
 	c := make(map[string]struct{})
 	a := ConvertTeacherAssign(teachers)
 	everageHour := EverageHour(teachers, classrooms) //หาค่าเฉลีย
@@ -178,7 +187,64 @@ func Can(teachers []entities.Teacher, classrooms []entities.Classroom) (SchedulR
 	for i := 1; i <= 40; i++ {
 		fmt.Printf("%d : %v %v %v\n", i, oderTable[position{x: 0, y: i}], oderTable[position{x: 1, y: i}], oderTable[position{x: 2, y: i}])
 	}
-	return SchedulRes{}, nil
+
+	// Build SchedulRes
+	studentScheduleMap := make(map[uint]*entities.ScadulStudent)
+	teacherScheduleMap := make(map[uint]*entities.ScadulTeacher)
+
+	// Initialize maps
+	for _, cl := range classrooms {
+		studentScheduleMap[cl.ID] = &entities.ScadulStudent{
+			ClassroomID:            cl.ID,
+			SubjectInScadulStudent: []entities.SubjectInScadulStudent{},
+			UseIn:                  "2024/1", // Example default
+		}
+	}
+	for _, t := range teachers {
+		teacherScheduleMap[t.ID] = &entities.ScadulTeacher{
+			TeacherID:              t.ID,
+			SubjectInScadulTeacher: []entities.SubjectInScadulTeacher{},
+			UseIn:                  "2024/1", // Example default
+		}
+	}
+
+	for pos, assign := range oderTable {
+		if assign == nil {
+			continue
+		}
+		// Classroom schedule
+		clID := classrooms[pos.x].ID
+		if ss, ok := studentScheduleMap[clID]; ok {
+			ss.SubjectInScadulStudent = append(ss.SubjectInScadulStudent, entities.SubjectInScadulStudent{
+				TeacherID: assign.TeacherID,
+				SubjectID: assign.SubjectID,
+				Order:     pos.y,
+			})
+		}
+
+		// Teacher schedule
+		if ts, ok := teacherScheduleMap[assign.TeacherID]; ok {
+			ts.SubjectInScadulTeacher = append(ts.SubjectInScadulTeacher, entities.SubjectInScadulTeacher{
+				TeacherID: assign.TeacherID,
+				SubjectID: assign.SubjectID,
+				Order:     pos.y,
+			})
+		}
+	}
+
+	studentRes := []entities.ScadulStudent{}
+	for _, v := range studentScheduleMap {
+		studentRes = append(studentRes, *v)
+	}
+	teacherRes := []entities.ScadulTeacher{}
+	for _, v := range teacherScheduleMap {
+		teacherRes = append(teacherRes, *v)
+	}
+
+	return SchedulRes{
+		StudentScheduls: studentRes,
+		TeacherScheduls: teacherRes,
+	}, nil
 }
 
 func orderSchedule(teacherAssign map[uint]TeacherAssign, classrooms []entities.Classroom) map[position]*TeacherInOrder {
@@ -187,7 +253,7 @@ func orderSchedule(teacherAssign map[uint]TeacherAssign, classrooms []entities.C
 	for i := 1; i <= 40; i++ {
 		for roomI := range classrooms {
 			//fmt.Println(i, roomI)
-			order[position{x: roomI, y: i}] = teacher.tik(i)
+			order[position{x: roomI, y: i}] = teacher.tik(i, classrooms[roomI].ID)
 		}
 	}
 	//fmt.Println("order", order)
@@ -196,6 +262,7 @@ func orderSchedule(teacherAssign map[uint]TeacherAssign, classrooms []entities.C
 
 type TeacherInOrder struct {
 	TeacherID uint
+	SubjectID uint
 }
 
 type teacherAllocate struct {
@@ -221,22 +288,40 @@ func NewTeacherAllocate(TeacherAssign map[uint]TeacherAssign) teacherAllocate {
 	}
 }
 
-func (ta *teacherAllocate) tik(y int) *TeacherInOrder {
+func (ta *teacherAllocate) tik(y int, classroomID uint) *TeacherInOrder {
 	var winID uint
+	var winSubjectID uint
+	var winKey string
 	var maxHour int = -1
+	found := false
+
 	// หาครูที่มีชั่วโมงมากที่สุดและยังไม่ได้ถูกเพิ่มในคาบ y
 	if len(ta.YAdded[y].teachers) > 0 {
 
 		for teacherID := range ta.YAdded[y].teachers {
-			if ta.TeacherAssign[teacherID].AllocatedHour > maxHour {
-				maxHour = ta.TeacherAssign[teacherID].AllocatedHour
-				winID = teacherID
+			// Check if teacher has subjects for this classroom
+			t := ta.TeacherAssign[teacherID]
+			for key, sub := range t.Subjects {
+				if sub.ClassroomID == classroomID && sub.Credit > 0 {
+					if t.AllocatedHour > maxHour {
+						maxHour = t.AllocatedHour
+						winID = teacherID
+						winSubjectID = sub.SubjectID
+						winKey = key
+						found = true
+					}
+					// Found a valid subject for this teacher, compare with maxHour
+					// We break inner loop because any valid subject qualifies the teacher
+					// But wait, if teacher has multiple subjects for same class?
+					// Just picking one is fine.
+					break
+				}
 			}
 		}
 	} else {
 		return nil
 	}
-	if maxHour <= 0 {
+	if !found {
 		return nil
 	}
 
@@ -245,18 +330,26 @@ func (ta *teacherAllocate) tik(y int) *TeacherInOrder {
 	// Get the struct from the map, modify it, and put it back
 	teacher := ta.TeacherAssign[winID]
 	teacher.AllocatedHour -= 1
+
+	// Decrement subject credit
+	if s, ok := teacher.Subjects[winKey]; ok {
+		s.Credit -= 1
+		teacher.Subjects[winKey] = s
+	}
+
 	ta.TeacherAssign[winID] = teacher
 	//fmt.Printf("winID %d\n", winID)
 	//fmt.Printf("%d %d\n", ta.TeacherAssign[1].AllocatedHour, ta.TeacherAssign[2].AllocatedHour)
 
-	return &TeacherInOrder{TeacherID: winID}
+	return &TeacherInOrder{TeacherID: winID, SubjectID: winSubjectID}
 }
 
 func GetAllSubjectInClassroom(classrooms []entities.Classroom) []entities.SubjectInPreCurriculum {
+
 	allSubject := []entities.SubjectInPreCurriculum{}
 	for _, cl := range classrooms {
-		for _, subject := range cl.PreCurriculum.SubjectInPreCurriculum {
-			allSubject = append(allSubject, subject)
+		for _, subject := range cl.Curriculum.SubjectInCurriculum {
+			allSubject = append(allSubject, subject.SubjectInPreCurriculum)
 		}
 	}
 	return allSubject
@@ -268,7 +361,7 @@ func ConvertTeacherAssign(teachers []entities.Teacher) map[uint]TeacherAssign {
 		teacherAssign[teacher.ID] = TeacherAssign{
 
 			AllocatedHour: 0,
-			Subjects:      map[uint]SubjectAssign{},
+			Subjects:      map[string]SubjectAssign{},
 			MySubjects:    ConvertMySubject(teacher.MySubject),
 		}
 	}
@@ -288,9 +381,9 @@ func EverageHour(teachers []entities.Teacher, classrooms []entities.Classroom) i
 	allHour := 0
 
 	for _, cl := range classrooms {
-		for _, subject := range cl.PreCurriculum.SubjectInPreCurriculum {
-			allSubject = append(allSubject, subject)
-			allHour += subject.Credit
+		for _, subject := range cl.Curriculum.SubjectInCurriculum {
+			allSubject = append(allSubject, subject.SubjectInPreCurriculum)
+			allHour += subject.SubjectInPreCurriculum.Credit
 		}
 	}
 

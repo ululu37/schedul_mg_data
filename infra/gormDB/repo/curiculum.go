@@ -132,3 +132,11 @@ func (r *CurriculumRepo) UpdateTerm(updates []SubjectTermUpdate) error {
 	}
 	return nil
 }
+
+func (r *CurriculumRepo) GetAll() ([]entities.Curriculum, error) {
+	var list []entities.Curriculum
+	if err := r.DB.Preload("SubjectInCurriculum").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}

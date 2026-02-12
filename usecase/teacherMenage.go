@@ -46,21 +46,24 @@ func (u *TeacherMg) AddMySubject(teacherID uint, subjects []entities.TeacherMySu
 	if err != nil {
 		return err
 	}
-	if len(existingSubjects) > 0 {
-		//	return errors.New("one or more subjects already exist for this teacher")
-		for is, _ := range subjects {
-			for i, _ := range existingSubjects {
-				if subjects[is].SubjectID == existingSubjects[i].SubjectID {
-					existingSubjects = append(existingSubjects[:i], existingSubjects[i+1:]...)
-					subjects = append(subjects[:is], subjects[is+1:]...)
-					break
-				}
-			}
-		}
-		if len(subjects) == 0 {
-			return nil //errors.New("no subjects to add")
+	// Filter out already existing subjects
+	filteredSubjects := []entities.TeacherMySubject{}
+	existingMap := make(map[uint]bool)
+	for _, es := range existingSubjects {
+		existingMap[es.SubjectID] = true
+	}
+
+	for _, s := range subjects {
+		if !existingMap[s.SubjectID] {
+			filteredSubjects = append(filteredSubjects, s)
 		}
 	}
+	subjects = filteredSubjects
+
+	if len(subjects) == 0 {
+		return nil
+	}
+
 	return u.teacherRepo.AddMySubject(teacherID, subjects)
 }
 

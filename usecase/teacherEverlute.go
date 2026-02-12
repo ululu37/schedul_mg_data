@@ -109,10 +109,10 @@ func (t *TeacherEverlute) Everlute() error {
 				return err
 			}
 			for _, ev := range aiRes.Evaluation {
-				//fmt.Println("id: %v, adtitude: %v", ev.ID, ev.Adtritud)
+				//fmt.Println("id: %v, aptitude: %v", ev.ID, ev.Aptitude)
 				toMySubject = append(toMySubject, entities.TeacherMySubject{
 					SubjectID:  uint(ev.ID),
-					Preference: ev.Adtritud,
+					Preference: ev.Aptitude,
 				})
 
 			}
@@ -122,11 +122,13 @@ func (t *TeacherEverlute) Everlute() error {
 
 		t.teacherMg.AddMySubject(teacher.ID, toMySubject)
 	}
-
+	fmt.Println("success")
 	return nil
 }
 
 func (t *TeacherEverlute) everluteAi(teacher entities.Teacher, mysubject []entities.Subject) (*dto.EvaluationResponse, error) {
+	fmt.Println("everluteAi teacher: ", teacher.Name, "Resume: ", teacher.Resume)
+	//fmt.Println("everluteAi mysubject: ", mysubject)
 	//fmt.Printf("ssssssss\n", mysubject)
 	respBody, errAi := t.agent.Chat([]aiAgent.Message{
 		{
@@ -148,7 +150,7 @@ Output JSON only.
 Output schema:
 {
   "evaluation": [
-    { "id": "number", "adtritud": "number" }
+    { "id": "number", "aptitude": "number" }
   ]
 }
 `,

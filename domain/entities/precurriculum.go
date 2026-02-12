@@ -12,7 +12,7 @@ type SubjectInPreCurriculum struct {
 	PreCurriculumID uint    `json:"pre_curriculum_id"`
 	SubjectID       uint    `json:"subject_id"`
 	Credit          int     `json:"credit"`
-	Subject         Subject `gorm:"foreignKey:SubjectID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"-"`
+	Subject         Subject `gorm:"foreignKey:SubjectID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"subject"`
 
 	PreCurriculum PreCurriculum `gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"-"`
 }

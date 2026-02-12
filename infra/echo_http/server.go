@@ -24,6 +24,7 @@ type echoServer struct {
 	scadulStudentMg      *usecase.ScadulStudentMg
 	scadulTeacherMg      *usecase.ScadulTeacherMg
 	auth                 *usecase.Auth
+	scheduleUsecase      *usecase.ScheduleUsecase
 	app                  *echo.Echo
 }
 
@@ -39,6 +40,7 @@ func NewEchoServer(config *config.Config,
 	scadulStudentMg *usecase.ScadulStudentMg,
 	scadulTeacherMg *usecase.ScadulTeacherMg,
 	auth *usecase.Auth,
+	scheduleUsecase *usecase.ScheduleUsecase,
 ) *echoServer {
 	return &echoServer{
 		config:               config,
@@ -53,6 +55,7 @@ func NewEchoServer(config *config.Config,
 		scadulStudentMg:      scadulStudentMg,
 		scadulTeacherMg:      scadulTeacherMg,
 		auth:                 auth,
+		scheduleUsecase:      scheduleUsecase,
 	}
 }
 
@@ -78,6 +81,7 @@ func (s *echoServer) Start() {
 	router.RegisterScadulStudentRoutes(s.app, s.scadulStudentMg)
 	router.RegisterScadulTeacherRoutes(s.app, s.scadulTeacherMg)
 	router.RegisterAuthRoutes(s.app, s.auth)
+	router.RegisterScheduleRoutes(s.app, s.scheduleUsecase)
 
 	// TODO: add other routes and middleware
 	s.app.Logger.Fatal(s.app.Start(s.config.Server.Port))

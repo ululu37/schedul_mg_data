@@ -13,6 +13,13 @@ import (
 func RegisterCurriculumRoutes(e *echo.Echo, uc *usecase.CurriculumMg) {
 	g := e.Group("/curriculum")
 
+	g.POST("/map-precurriculum", func(c echo.Context) error {
+		if err := uc.SyncPreCurriculum(); err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return c.NoContent(http.StatusOK)
+	}, middleware.Permit(0))
+
 	g.POST("", func(c echo.Context) error {
 		var req struct {
 			Name            string `json:"name"`

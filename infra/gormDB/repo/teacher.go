@@ -203,3 +203,11 @@ func (r *TeacherRepo) GetByID(id uint) (*entities.Teacher, error) {
 }
 
 // NewTeacherRepo creates a new TeacherRepo instance
+
+func (r *TeacherRepo) GetAllWithRelations() ([]entities.Teacher, error) {
+	var list []entities.Teacher
+	if err := r.DB.Preload("MySubject").Preload("MySubject.Subject").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}

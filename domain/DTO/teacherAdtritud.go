@@ -6,5 +6,5 @@ type EvaluationResponse struct {
 
 type EvaluationItem struct {
 	ID       int `json:"id"`
-	Adtritud int `json:"adtritud"`
+	Aptitude int `json:"aptitude"`
 }

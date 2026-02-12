@@ -103,142 +103,211 @@ go run main.go
 
 ### Auth (`/auth`)
 - `post {{url}}/auth/login`
-  - body: `{"username": "admin", "password": "password"}`
+  - **Purpose**: Authenticate user and retrieve JWT token.
+  - body: `{"username": "admin", "password": "123456"}`
 - `get {{url}}/auth?search=&page=1&perpage=100` (Admin)
+  - **Purpose**: List all users (teachers, students, admins).
   - body: `{}`
 - `put {{url}}/auth/:id` (Admin)
+  - **Purpose**: Update user credentials or role.
   - body: `{"username": "...", "human_type": "...", "role": ...}`
 - `delete {{url}}/auth/:id?humantype=s` (Admin)
+  - **Purpose**: Delete a user account.
   - body: `{}`
 
 ### Teacher (`/teacher`)
 - `get {{url}}/teacher/:id` (Admin/User)
+  - **Purpose**: Get detailed information about a specific teacher.
   - body: `{}`
 - `post {{url}}/teacher` (Admin)
+  - **Purpose**: Register a new teacher.
   - body: `{"name": "...", "resume": "...", "username": "...", "password": "...", "role": 1}`
 - `get {{url}}/teacher?search=&page=1&perpage=100` (Admin/User)
+  - **Purpose**: List all teachers with pagination and search.
   - body: `{}`
 - `put {{url}}/teacher/:id` (Admin)
+  - **Purpose**: Update teacher profile (name, resume).
   - body: `{"name": "...", "resume": "..."}`
 - `delete {{url}}/teacher/:id` (Admin)
+  - **Purpose**: Remove a teacher from the system.
   - body: `{}`
 - `get {{url}}/teacher/:id/mysubject?search=&page=1&perpage=100` (Admin/User)
+  - **Purpose**: List subjects a teacher is capable of teaching, with preference scores.
   - body: `{}`
 - `post {{url}}/teacher/:id/mysubject` (Admin)
+  - **Purpose**: Assign subjects to a teacher with a preference level (suitability).
   - body: `[{"subject_id": 1, "preference": 5}]`
 - `delete {{url}}/teacher/:id/mysubject` (Admin)
+  - **Purpose**: Unassign subjects from a teacher.
   - body: `{"ids": [1, 2]}`
 - `post {{url}}/teacher/aieverlute` (Admin)
+  - **Purpose**: AI-powered evaluation to suggest or match teachers to subjects.
   - body: `{}`
 
 ### Student (`/student`)
 - `get {{url}}/student?search=&page=1&perpage=100` (Admin/User)
+  - **Purpose**: List all students.
   - body: `{}`
 - `post {{url}}/student` (Admin)
+  - **Purpose**: Register a new student and assign them to a classroom/curriculum.
   - body: `{"name": "...", "curriculum_id": 1, "year": 2024, "classroom_id": 1, "username": "...", "password": "...", "role": 1}`
 - `get {{url}}/student/:id` (Admin/User)
+  - **Purpose**: Get detailed profile of a student.
   - body: `{}`
 - `put {{url}}/student/:id` (Admin)
+  - **Purpose**: Update student details.
   - body: `{"name": "...", "curriculum_id": 1, "year": 2024, "classroom_id": 1}`
 - `delete {{url}}/student/:id` (Admin)
+  - **Purpose**: Remove a student from the system.
   - body: `{}`
 
 ### Subject (`/subject`)
 - `get {{url}}/subject?search=&page=1&perpage=100` (Admin/User)
+  - **Purpose**: List all available subjects in the system.
   - body: `{}`
 - `post {{url}}/subject` (Admin)
+  - **Purpose**: Create one or more new subjects.
   - body: `{"names": ["Math", "Science"]}`
 - `get {{url}}/subject/:id` (Admin/User)
+  - **Purpose**: Get details of a specific subject.
   - body: `{}`
 - `put {{url}}/subject/:id` (Admin)
+  - **Purpose**: Rename a subject.
   - body: `{"name": "Math"}`
 - `delete {{url}}/subject/:id` (Admin)
+  - **Purpose**: Delete a subject.
   - body: `{}`
 
 ### Classroom (`/classroom`)
 - `get {{url}}/classroom?search=&page=1&perpage=100` (Admin/User)
+  - **Purpose**: List all classrooms.
   - body: `{}`
 - `post {{url}}/classroom` (Admin)
+  - **Purpose**: Create a new classroom bound to a curriculum.
   - body: `{"name": "Room 101", "pre_curriculum_id": 1, "curriculum_id": 2, "year": 2024}`
 - `get {{url}}/classroom/:id` (Admin/User)
+  - **Purpose**: Get details of a specific classroom.
   - body: `{}`
 - `put {{url}}/classroom/:id` (Admin)
+  - **Purpose**: Update classroom details.
   - body: `{"name": "Room 101 Updated", "pre_curriculum_id": 1, "curriculum_id": 2, "year": 2024}`
 - `delete {{url}}/classroom/:id` (Admin)
+  - **Purpose**: Delete a classroom.
   - body: `{}`
 
 ### Term (`/term`)
 - `get {{url}}/term` (Admin/User)
+  - **Purpose**: List all academic terms (e.g., Term 1, Term 2).
   - body: `{}`
 - `post {{url}}/term` (Admin)
+  - **Purpose**: Create a new term.
   - body: `{"name": "Term 1"}`
 - `put {{url}}/term/:id` (Admin)
+  - **Purpose**: Rename a term.
   - body: `{"name": "Term 1 Updated"}`
 - `delete {{url}}/term/:id` (Admin)
+  - **Purpose**: Delete a term.
   - body: `{}`
 
 ### Curriculum (`/curriculum`)
 - `get {{url}}/curriculum?search=&page=1&perpage=100` (Admin/User)
+  - **Purpose**: List all curriculums.
   - body: `{}`
 - `post {{url}}/curriculum` (Admin)
+  - **Purpose**: Create a new curriculum.
   - body: `{"name": "...", "pre_curriculum_id": 1}`
 - `get {{url}}/curriculum/:id` (Admin/User)
+  - **Purpose**: Get curriculum details, including its subjects.
   - body: `{}`
 - `put {{url}}/curriculum/:id` (Admin)
+  - **Purpose**: Update curriculum name.
   - body: `{"name": "..."}`
 - `delete {{url}}/curriculum/:id` (Admin)
+  - **Purpose**: Delete a curriculum.
   - body: `{}`
 - `post {{url}}/curriculum/:id/subject` (Admin)
+  - **Purpose**: Manually add subjects to a curriculum.
   - body: `[1, 2, 3]`
 - `delete {{url}}/curriculum/subject` (Admin)
+  - **Purpose**: Remove subjects from a curriculum.
   - body: `{"ids": [1]}`
 - `patch {{url}}/curiculum/subject/term` (Admin)
+  - **Purpose**: Assign specific terms to subjects within a curriculum.
   - body: `[{"id": 1, "term_id": 1}, {"id": 2, "term_id": null}]`
+- `post {{url}}/curriculum/map-precurriculum` (Admin)
+  - **Purpose**: Automatically sync and populate subjects from PreCurriculum to all Curriculums.
+  - body: `{}`
 
 ### PreCurriculum (`/precurriculum`)
 - `get {{url}}/precurriculum?search=&page=1&perpage=100` (Admin/User)
+  - **Purpose**: List all pre-curriculums (templates for curriculums).
   - body: `{}`
 - `post {{url}}/precurriculum` (Admin)
+  - **Purpose**: Create a new pre-curriculum (e.g., "Standard Science Course 2024").
   - body: `{"name": "..."}`
 - `get {{url}}/precurriculum/:id` (Admin/User)
+  - **Purpose**: Get details of a pre-curriculum.
   - body: `{}`
 - `put {{url}}/precurriculum/:id` (Admin)
+  - **Purpose**: Update pre-curriculum name.
   - body: `{"name": "..."}`
 - `delete {{url}}/precurriculum/:id` (Admin)
+  - **Purpose**: Delete a pre-curriculum.
   - body: `{}`
 - `post {{url}}/precurriculum/:id/subject` (Admin)
+  - **Purpose**: Define subjects and credits within a pre-curriculum.
   - body: `[{"subject_name": "Math", "credit": 3}]`
 - `delete {{url}}/precurriculum/subject/:id` (Admin)
+  - **Purpose**: Remove a subject from a pre-curriculum.
   - body: `{}`
 
 ### Scadul Student (`/scadulstudent`)
 - `get {{url}}/scadulstudent?search=&page=1&perpage=100` (Admin/User)
+  - **Purpose**: List all generated student schedules.
   - body: `{}`
 - `post {{url}}/scadulstudent` (Admin)
+  - **Purpose**: Manually create a student schedule entry.
   - body: `{"classroom_id": 1, "use_in": "2024/1"}`
 - `get {{url}}/scadulstudent/:id` (Admin/User)
+  - **Purpose**: Get specific student schedule details.
   - body: `{}`
 - `put {{url}}/scadulstudent/:id` (Admin)
+  - **Purpose**: Update student schedule metadata.
   - body: `{"classroom_id": 1, "use_in": "2024/1"}`
 - `delete {{url}}/scadulstudent/:id` (Admin)
+  - **Purpose**: Delete a student schedule.
   - body: `{}`
 - `post {{url}}/scadulstudent/:id/subject` (Admin)
+  - **Purpose**: Add a specific subject slot (with teacher and order) to a student's schedule.
   - body: `[{"teacher_id": 1, "subject_id": 1, "order": 1}]`
 - `delete {{url}}/scadulstudent/subject` (Admin)
+  - **Purpose**: Remove a subject slot from a student's schedule.
   - body: `{"ids": [1]}`
 
 ### Scadul Teacher (`/scadulteacher`)
 - `get {{url}}/scadulteacher?search=&page=1&perpage=100` (Admin/User)
+  - **Purpose**: List all generated teacher schedules.
   - body: `{}`
 - `post {{url}}/scadulteacher` (Admin)
+  - **Purpose**: Manually create a teacher schedule entry.
   - body: `{"teacher_id": 1, "use_in": "2024/1"}`
 - `get {{url}}/scadulteacher/:id` (Admin/User)
+  - **Purpose**: Get specific teacher schedule details.
   - body: `{}`
 - `put {{url}}/scadulteacher/:id` (Admin)
+  - **Purpose**: Update teacher schedule metadata.
   - body: `{"teacher_id": 1, "use_in": "2024/1"}`
 - `delete {{url}}/scadulteacher/:id` (Admin)
+  - **Purpose**: Delete a teacher schedule.
   - body: `{}`
 - `post {{url}}/scadulteacher/:id/subject` (Admin)
+  - **Purpose**: Add a specific subject slot (teaching assignment) for a teacher.
   - body: `[{"teacher_id": 1, "subject_id": 1, "order": 1}]`
 - `delete {{url}}/scadulteacher/subject` (Admin)
+  - **Purpose**: Remove a teaching assignment slot.
   - body: `{"ids": [1]}`
+
+### Schedule (`/schedule`)
+- `post {{url}}/schedule/generate` (Admin)
+  - **Purpose**: **Core Feature**. Triggers the automatic scheduling engine. This loads all data, runs the scheduling algorithm, and saves the resulting Student and Teacher schedules to the database.
+  - body: `{}`

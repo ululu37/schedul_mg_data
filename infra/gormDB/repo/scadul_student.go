@@ -96,3 +96,15 @@ func (r *ScadulStudentRepo) RemoveSubjects(ids []uint) error {
 	}
 	return nil
 }
+
+func (r *ScadulStudentRepo) DeleteAll() error {
+	// Delete all subject assignments first
+	if err := r.DB.Exec("DELETE FROM subject_in_scadul_students").Error; err != nil {
+		return err
+	}
+	// Then delete all schedules
+	if err := r.DB.Exec("DELETE FROM scadul_students").Error; err != nil {
+		return err
+	}
+	return nil
+}

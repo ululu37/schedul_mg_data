@@ -97,3 +97,11 @@ func (r *ClassroomRepo) GetByID(id uint) (*entities.Classroom, error) {
 	}
 	return c, nil
 }
+
+func (r *ClassroomRepo) GetAllWithRelations() ([]entities.Classroom, error) {
+	var list []entities.Classroom
+	if err := r.DB.Preload("Curriculum.SubjectInCurriculum.SubjectInPreCurriculum.Subject").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}

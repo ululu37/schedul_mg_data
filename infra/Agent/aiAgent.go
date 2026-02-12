@@ -5,7 +5,6 @@ package aiAgent
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -52,7 +51,7 @@ func (g *Agent) Chat(messages []Message) (*ChatCompletionResponse, error) {
 	defer resp.Body.Close()
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(respBody))
+	//fmt.Println(string(respBody))
 
 	var result ChatCompletionResponse
 
