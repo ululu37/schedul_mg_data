@@ -38,6 +38,35 @@ services:
       - "5432:5432"
     volumes:
       - ./data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scadul_app
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    environment:
+      # Database configuration
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 123456
+      DB_NAME: app_db
+    volumes:
+      # Mount .env file if you prefer to use it instead of environment variables
+      - ./.env:/root/.env:ro
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 # volumes:
 #   postgres_data:

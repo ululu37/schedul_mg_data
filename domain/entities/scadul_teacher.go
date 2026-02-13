@@ -12,11 +12,11 @@ type ScadulTeacher struct {
 type SubjectInScadulTeacher struct {
 	ID              uint `gorm:"primaryKey" json:"id"`
 	ScadulTeacherID uint `json:"scadul_teacher_id"`
-	TeacherID       uint `json:"teacher_id"`
+	ClassroomID     uint `json:"classroom_id"`
 	SubjectID       uint `json:"subject_id"`
 	Order           int  `json:"order"`
 
-	ScadulTeacher ScadulTeacher `gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"-"`
-	Teacher       Teacher       `gorm:"foreignKey:TeacherID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"teacher"`
+	ScadulTeacher ScadulTeacher `gorm:"foreignKey:ScadulTeacherID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"-"`
+	Classroom     Classroom     `gorm:"foreignKey:ClassroomID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"classroom"`
 	Subject       Subject       `gorm:"foreignKey:SubjectID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"subject"`
 }

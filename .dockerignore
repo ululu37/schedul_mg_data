@@ -1,0 +1,33 @@
+# Git files
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Build artifacts
+*.exe
+main
+app
+scadulDataMono
+tmp/
+test/
+
+# Environment files (will be mounted or configured separately)
+.env
+
+# Data directory
+data/
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+
+# OS files
+.DS_Store
+Thumbs.db

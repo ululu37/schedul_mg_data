@@ -8,6 +8,7 @@ import (
 	dto "scadulDataMono/domain/DTO"
 	"scadulDataMono/domain/entities"
 	aiAgent "scadulDataMono/infra/Agent"
+	"strings"
 )
 
 type TeacherEverlute struct {
@@ -106,11 +107,13 @@ func (t *TeacherEverlute) Everlute() error {
 			//fmt.Println("len subjectsEvuList before: %d, n : %d", len(subjectsEvuList), n)
 			aiRes, err := t.everluteAi(teacher, subjectsEvuList[:n])
 			if err != nil {
+				fmt.Println("errAI", err)
 				return err
 			}
 			for _, ev := range aiRes.Evaluation {
-				//fmt.Println("id: %v, aptitude: %v", ev.ID, ev.Aptitude)
+				fmt.Printf("id: %v, aptitude: %v\n", ev.ID, ev.Aptitude)
 				toMySubject = append(toMySubject, entities.TeacherMySubject{
+					TeacherID:  teacher.ID,
 					SubjectID:  uint(ev.ID),
 					Preference: ev.Aptitude,
 				})
@@ -119,8 +122,9 @@ func (t *TeacherEverlute) Everlute() error {
 
 			subjectsEvuList = subjectsEvuList[n:]
 		}
-
+		fmt.Printf("toMySubject %+v\n", toMySubject)
 		t.teacherMg.AddMySubject(teacher.ID, toMySubject)
+
 	}
 	fmt.Println("success")
 	return nil
@@ -171,10 +175,17 @@ Output schema:
 
 	var res dto.EvaluationResponse
 
-	errJsonEncode := json.Unmarshal([]byte(respBody.Choices[0].Message.Content), &res)
+	content := respBody.Choices[0].Message.Content
+	start := strings.Index(content, "{")
+	end := strings.LastIndex(content, "}")
+	if start != -1 && end != -1 && start < end {
+		content = content[start : end+1]
+	}
+
+	errJsonEncode := json.Unmarshal([]byte(content), &res)
 	if errJsonEncode != nil {
 		return nil, errJsonEncode
 	}
-
+	fmt.Println("AIres")
 	return &res, nil
 }

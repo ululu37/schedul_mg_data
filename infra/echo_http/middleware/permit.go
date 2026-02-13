@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	jwthast "scadulDataMono/infra/jwt_hast"
 
@@ -14,7 +13,7 @@ func Permit(roles ...int) echo.MiddlewareFunc {
 			// Get token from cookie or header
 			tokenString := ""
 			cookie, err := c.Cookie("token")
-			fmt.Println("cookie:", cookie)
+			//fmt.Println("cookie:", cookie)
 			if err == nil {
 				tokenString = cookie.Value
 			} else {

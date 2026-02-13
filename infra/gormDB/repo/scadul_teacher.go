@@ -60,7 +60,7 @@ func (r *ScadulTeacherRepo) Listing(search string, page, perPage int) ([]entitie
 		offset = (page - 1) * perPage
 		q = q.Limit(perPage).Offset(offset)
 	}
-	if err := q.Preload("SubjectInScadulTeacher.Teacher").Preload("SubjectInScadulTeacher.Subject").Find(&list).Error; err != nil {
+	if err := q.Preload("SubjectInScadulTeacher.Classroom").Preload("SubjectInScadulTeacher.Subject").Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 	return list, count, nil
@@ -68,7 +68,7 @@ func (r *ScadulTeacherRepo) Listing(search string, page, perPage int) ([]entitie
 
 func (r *ScadulTeacherRepo) GetByID(id uint) (*entities.ScadulTeacher, error) {
 	s := &entities.ScadulTeacher{}
-	if err := r.DB.Preload("SubjectInScadulTeacher.Teacher").Preload("SubjectInScadulTeacher.Subject").Preload("Teacher").First(s, id).Error; err != nil {
+	if err := r.DB.Preload("SubjectInScadulTeacher.Classroom").Preload("SubjectInScadulTeacher.Subject").Preload("Teacher").First(s, id).Error; err != nil {
 		return nil, err
 	}
 	return s, nil

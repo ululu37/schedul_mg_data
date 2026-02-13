@@ -225,9 +225,9 @@ func Can(teachers []entities.Teacher, classrooms []entities.Classroom) (SchedulR
 		// Teacher schedule
 		if ts, ok := teacherScheduleMap[assign.TeacherID]; ok {
 			ts.SubjectInScadulTeacher = append(ts.SubjectInScadulTeacher, entities.SubjectInScadulTeacher{
-				TeacherID: assign.TeacherID,
-				SubjectID: assign.SubjectID,
-				Order:     pos.y,
+				ClassroomID: assign.ClassroomID,
+				SubjectID:   assign.SubjectID,
+				Order:       pos.y,
 			})
 		}
 	}
@@ -261,8 +261,9 @@ func orderSchedule(teacherAssign map[uint]TeacherAssign, classrooms []entities.C
 }
 
 type TeacherInOrder struct {
-	TeacherID uint
-	SubjectID uint
+	TeacherID   uint
+	SubjectID   uint
+	ClassroomID uint
 }
 
 type teacherAllocate struct {
@@ -341,7 +342,7 @@ func (ta *teacherAllocate) tik(y int, classroomID uint) *TeacherInOrder {
 	//fmt.Printf("winID %d\n", winID)
 	//fmt.Printf("%d %d\n", ta.TeacherAssign[1].AllocatedHour, ta.TeacherAssign[2].AllocatedHour)
 
-	return &TeacherInOrder{TeacherID: winID, SubjectID: winSubjectID}
+	return &TeacherInOrder{TeacherID: winID, SubjectID: winSubjectID, ClassroomID: classroomID}
 }
 
 func GetAllSubjectInClassroom(classrooms []entities.Classroom) []entities.SubjectInPreCurriculum {
