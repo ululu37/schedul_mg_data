@@ -6,13 +6,18 @@ import (
 )
 
 type TeacherMg struct {
-	teacherRepo *repo.TeacherRepo
-	authRepo    *repo.AuthRepo
+	teacherRepo       *repo.TeacherRepo
+	authRepo          *repo.AuthRepo
+	scadulTeacherRepo *repo.ScadulTeacherRepo
 }
 
 // NewTeacherMg creates a new TeacherMg instance
-func NewTeacherMg(teacherRepo *repo.TeacherRepo, authRepo *repo.AuthRepo) *TeacherMg {
-	return &TeacherMg{teacherRepo: teacherRepo, authRepo: authRepo}
+func NewTeacherMg(teacherRepo *repo.TeacherRepo, authRepo *repo.AuthRepo, scadulTeacherRepo *repo.ScadulTeacherRepo) *TeacherMg {
+	return &TeacherMg{
+		teacherRepo:       teacherRepo,
+		authRepo:          authRepo,
+		scadulTeacherRepo: scadulTeacherRepo,
+	}
 }
 
 func (u *TeacherMg) Create(name string, resume string, username string, password string, role int) (uint, error) {
@@ -79,6 +84,15 @@ func (u *TeacherMg) Listing(search string, page, perPage int) ([]entities.Teache
 	return u.teacherRepo.Listing(search, page, perPage)
 }
 func (u *TeacherMg) Delete(id uint) error {
+	if err := u.teacherRepo.DeleteAllMySubjects(id); err != nil {
+		return err
+	}
+	// Delete any schedule data associated with the teacher
+	if u.scadulTeacherRepo != nil {
+		if err := u.scadulTeacherRepo.DeleteByTeacherID(id); err != nil {
+			return err
+		}
+	}
 	return u.teacherRepo.Delete(id)
 }
 

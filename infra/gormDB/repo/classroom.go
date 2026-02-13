@@ -36,6 +36,23 @@ func (r *ClassroomRepo) Update(id uint, updated *entities.Classroom) (*entities.
 }
 
 func (r *ClassroomRepo) Delete(id uint) error {
+	// Find associated ScadulStudents
+	var scadulStudentIDs []uint
+	if err := r.DB.Model(&entities.ScadulStudent{}).Where("classroom_id = ?", id).Pluck("id", &scadulStudentIDs).Error; err != nil {
+		return err
+	}
+
+	if len(scadulStudentIDs) > 0 {
+		// Delete SubjectInScadulStudent associations
+		if err := r.DB.Where("scadul_student_id IN ?", scadulStudentIDs).Delete(&entities.SubjectInScadulStudent{}).Error; err != nil {
+			return err
+		}
+		// Delete ScadulStudents
+		if err := r.DB.Where("id IN ?", scadulStudentIDs).Delete(&entities.ScadulStudent{}).Error; err != nil {
+			return err
+		}
+	}
+
 	res := r.DB.Delete(&entities.Classroom{}, id)
 	if res.Error != nil {
 		return res.Error

@@ -31,6 +31,11 @@ func (r *PreCuriculumRepo) Update(id uint, updated *entities.PreCurriculum) (*en
 }
 
 func (r *PreCuriculumRepo) Delete(id uint) error {
+	// First delete all associated subjects in this curriculum
+	if err := r.DB.Where("pre_curriculum_id = ?", id).Delete(&entities.SubjectInPreCurriculum{}).Error; err != nil {
+		return err
+	}
+
 	res := r.DB.Delete(&entities.PreCurriculum{}, id)
 	if res.Error != nil {
 		return res.Error

@@ -181,6 +181,15 @@ func (r *TeacherRepo) RemoveMySubject(ids []uint) error {
 	return nil
 }
 
+// DeleteAllMySubjects removes all subjects assigned to a teacher
+func (r *TeacherRepo) DeleteAllMySubjects(teacherID uint) error {
+	res := r.DB.Where("teacher_id = ?", teacherID).Delete(&entities.TeacherMySubject{})
+	if res.Error != nil {
+		return res.Error
+	}
+	return nil
+}
+
 // GetMySubjectBySubjectIDs returns TeacherMySubject records for given SubjectIDs
 func (r *TeacherRepo) GetMySubjectBySubjectIDs(teacherID uint, subjectIDs []uint) ([]entities.TeacherMySubject, error) {
 	var list []entities.TeacherMySubject

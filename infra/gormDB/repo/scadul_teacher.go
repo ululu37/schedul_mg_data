@@ -109,3 +109,23 @@ func (r *ScadulTeacherRepo) DeleteAll() error {
 	}
 	return nil
 }
+
+func (r *ScadulTeacherRepo) DeleteByTeacherID(teacherID uint) error {
+	// Find ScadulTeacher IDs for this teacher
+	var scadulIDs []uint
+	if err := r.DB.Model(&entities.ScadulTeacher{}).Where("teacher_id = ?", teacherID).Pluck("id", &scadulIDs).Error; err != nil {
+		return err
+	}
+
+	if len(scadulIDs) > 0 {
+		// Delete related SubjectInScadulTeacher first
+		if err := r.DB.Where("scadul_teacher_id IN ?", scadulIDs).Delete(&entities.SubjectInScadulTeacher{}).Error; err != nil {
+			return err
+		}
+		// Delete ScadulTeachers
+		if err := r.DB.Where("id IN ?", scadulIDs).Delete(&entities.ScadulTeacher{}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}

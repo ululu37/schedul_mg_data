@@ -32,6 +32,45 @@ func (r *CurriculumRepo) Update(id uint, updated *entities.Curriculum) (*entitie
 }
 
 func (r *CurriculumRepo) Delete(id uint) error {
+	// 1. Delete associated ScadulStudents (via classrooms)
+	// Find classroom IDs associated with this curriculum
+	var classroomIDs []uint
+	if err := r.DB.Model(&entities.Classroom{}).Where("curriculum_id = ?", id).Pluck("id", &classroomIDs).Error; err != nil {
+		return err
+	}
+
+	if len(classroomIDs) > 0 {
+		// Find ScadulStudent IDs
+		var scadulStudentIDs []uint
+		if err := r.DB.Model(&entities.ScadulStudent{}).Where("classroom_id IN ?", classroomIDs).Pluck("id", &scadulStudentIDs).Error; err != nil {
+			return err
+		}
+
+		if len(scadulStudentIDs) > 0 {
+			// Delete SubjectInScadulStudent
+			if err := r.DB.Where("scadul_student_id IN ?", scadulStudentIDs).Delete(&entities.SubjectInScadulStudent{}).Error; err != nil {
+				return err
+			}
+			// Delete ScadulStudent
+			if err := r.DB.Where("id IN ?", scadulStudentIDs).Delete(&entities.ScadulStudent{}).Error; err != nil {
+				return err
+			}
+		}
+
+		// 2. Delete Classrooms
+		// Note: Students are CASCADE deleted by database constraint usually, but we can't be sure,
+		// however the error was about scadul_students.
+		if err := r.DB.Where("id IN ?", classroomIDs).Delete(&entities.Classroom{}).Error; err != nil {
+			return err
+		}
+	}
+
+	// 3. Delete associated subjects in this curriculum
+	if err := r.DB.Where("curriculum_id = ?", id).Delete(&entities.SubjectInCurriculum{}).Error; err != nil {
+		return err
+	}
+
+	// 4. Delete Curriculum
 	res := r.DB.Delete(&entities.Curriculum{}, id)
 	if res.Error != nil {
 		return res.Error

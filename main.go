@@ -35,7 +35,7 @@ func main() {
 	// Init usecases
 	subjectMg := &usecase.SubjectMg{SubjectRepo: subjectRepo}
 	preCurriculum := &usecase.PreCurriculum{PreRepo: preCurriculumRepo, SubjectMg: subjectMg}
-	teacherMg := usecase.NewTeacherMg(teacherRepo, authRepo)
+	teacherMg := usecase.NewTeacherMg(teacherRepo, authRepo, scadulTeacherRepo)
 	teacherEverlute := usecase.NewTeacherEverlute(teacherMg, subjectMg, aiAgent)
 	termUsecase := usecase.NewTermUsecase(termRepo)
 	studentMg := usecase.NewStudentMg(studentRepo, authRepo)
