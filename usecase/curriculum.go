@@ -18,7 +18,7 @@ func NewCurriculumMg(repo *repo.CurriculumRepo, preRepo *repo.PreCuriculumRepo) 
 }
 
 func (u *CurriculumMg) Create(name string, preCurriculumID uint) (uint, error) {
-	newC := &entities.Curriculum{Name: name, PreCurriculumID: preCurriculumID}
+	newC := &entities.Curriculum{Name: name, PreCurriculumID: &preCurriculumID}
 	return u.CurriculumRepo.Create(newC)
 }
 
@@ -67,9 +67,9 @@ func (u *CurriculumMg) SyncPreCurriculum() error {
 	}
 
 	for _, c := range curriculums {
-		if c.PreCurriculumID != 0 {
+		if c.PreCurriculumID != nil && *c.PreCurriculumID != 0 {
 			// Fetch PreCurriculum subjects
-			preCurriculum, err := u.PreCurriculumRepo.GetByID(c.PreCurriculumID)
+			preCurriculum, err := u.PreCurriculumRepo.GetByID(*c.PreCurriculumID)
 			if err != nil {
 				continue
 			}

@@ -162,8 +162,8 @@ Output schema:
 	})
 
 	var res dto.EvaluationResponse
-
-	errJsonEncode := json.Unmarshal([]byte(respBody.Choices[0].Message.Content), &res)
+	content := respBody.Choices[0].Message.Content.(string)
+	errJsonEncode := json.Unmarshal([]byte(content), &res)
 	if errJsonEncode != nil {
 		log.Fatal(errJsonEncode)
 	}

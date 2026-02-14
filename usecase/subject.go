@@ -9,14 +9,22 @@ type SubjectMg struct {
 	SubjectRepo *repo.SubjectRepo // Changed to pointer to SubjectRepo
 }
 
-func (s *SubjectMg) Create(name []string) ([]uint, error) {
-	subjects := make([]entities.Subject, 0, len(name))
-	for _, n := range name {
-		subjects = append(subjects, entities.Subject{Name: n})
-	}
-	ids, err := s.SubjectRepo.CreateMany(subjects)
-	if err != nil {
-		return nil, err
+func (s *SubjectMg) Create(names []string) ([]uint, error) {
+	ids := make([]uint, len(names))
+	for i, name := range names {
+		// Check if exists
+		existing, err := s.SubjectRepo.GetByName(name)
+		if err == nil {
+			ids[i] = existing.ID
+			continue
+		}
+
+		// Create new
+		newIDs, err := s.SubjectRepo.CreateMany([]entities.Subject{{Name: name}})
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = newIDs[0]
 	}
 	return ids, nil
 }
@@ -25,7 +33,15 @@ func (s *SubjectMg) Update(id uint, updated *entities.Subject) (*entities.Subjec
 }
 
 func (s *SubjectMg) Delete(id uint) error {
-	return s.SubjectRepo.Delete(id) // New method for deleting a subject
+	has, err := s.SubjectRepo.HasReferences(id)
+	if err != nil {
+		return err
+	}
+	// If still referenced by some curriculum or schedule, don't delete the core subject
+	if has {
+		return nil
+	}
+	return s.SubjectRepo.Delete(id)
 }
 
 func (s *SubjectMg) Listing(search string, page, perPage int) ([]entities.Subject, int64, error) {

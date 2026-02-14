@@ -59,7 +59,7 @@ go run main.go
   - `ID`: uint (Primary Key)
   - `PreCurriculumID`: uint (Foreign Key to PreCurriculum)
   - `SubjectID`: uint (Foreign Key to Subject)
-  - `Credit`: int
+  - `Credit`: int (Teaching Hours per Week / ชั่วโมงการสอนต่อสัปดาห์)
 - **Curriculum**:
   - `ID`: uint (Primary Key)
   - `Name`: string
@@ -138,11 +138,17 @@ go run main.go
   - **Purpose**: Assign subjects to a teacher with a preference level (suitability).
   - body: `[{"subject_id": 1, "preference": 5}]`
 - `delete {{url}}/teacher/:id/mysubject` (Admin)
-  - **Purpose**: Unassign subjects from a teacher.
+  - **Purpose**: Unassign specific subjects from a teacher.
   - body: `{"ids": [1, 2]}`
-- `post {{url}}/teacher/aieverlute` (Admin)
+- `delete {{url}}/teacher/:id/mysubject/all` (Admin)
+  - **Purpose**: Remove all subject assignments for a specific teacher.
+  - body: `{}`
+- `post {{url}}/teacher/aievaluate` (Admin)
   - **Purpose**: AI-powered evaluation to suggest or match teachers to subjects.
   - body: `{}`
+- `ws {{url}}/teacher/aievaluate/ws` (Admin)
+  - **Purpose**: Real-time AI evaluation with progress updates via WebSocket.
+  - **Behavior**: Streams progress text messages, ends with `"FINISHED"` or `"Error: ..."`.
 
 ### Student (`/student`)
 - `get {{url}}/student?search=&page=1&perpage=100` (Admin/User)
@@ -260,6 +266,22 @@ go run main.go
 - `delete {{url}}/precurriculum/subject/:id` (Admin)
   - **Purpose**: Remove a subject from a pre-curriculum.
   - body: `{}`
+- `post {{url}}/precurriculum/import` (Admin)
+  - **Purpose**: Import a curriculum from a file (Text, CSV) or Image (Snapshot/Screenshot) using AI.
+  - body (multipart): `file=@curriculum.png` (Multimodal support) OR `text="..."`
+  - **Note**: AI will extract subject names and teaching hours (credit) automatically.
+- `ws {{url}}/precurriculum/import/ws` (Admin)
+  - **Purpose**: Real-time AI import with progress updates via WebSocket.
+  - **Behavior**: 
+    1. Connect.
+    2. Client sends 1st message (Text or Base64 Image).
+    3. Server streams progress messages.
+    4. Ends with `"SUCCESS: [ID]"` or `"ERROR: ..."`.
+- `post {{url}}/precurriculum/import/webhook` (Admin)
+  - **Purpose**: Asynchronous AI import with Webhook callback.
+  - **Body**: `{"callback_url": "https://...", "text": "...", "image_base64": "..."}`
+  - **Response**: `202 Accepted` immediately.
+  - **Behavior**: Server sends a POST to `callback_url` when finished with `{"status": "success", "id": ...}` or error details.
 
 ### Scadul Student (`/scadulstudent`)
 - `get {{url}}/scadulstudent?search=&page=1&perpage=100` (Admin/User)

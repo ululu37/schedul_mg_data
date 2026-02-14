@@ -31,19 +31,33 @@ func (r *PreCuriculumRepo) Update(id uint, updated *entities.PreCurriculum) (*en
 }
 
 func (r *PreCuriculumRepo) Delete(id uint) error {
-	// First delete all associated subjects in this curriculum
-	if err := r.DB.Where("pre_curriculum_id = ?", id).Delete(&entities.SubjectInPreCurriculum{}).Error; err != nil {
-		return err
-	}
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Unlink from Classrooms instead of deleting them
+		if err := tx.Model(&entities.Classroom{}).Where("pre_curriculum_id = ?", id).Update("pre_curriculum_id", nil).Error; err != nil {
+			return err
+		}
 
-	res := r.DB.Delete(&entities.PreCurriculum{}, id)
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-	return nil
+		// 2. Unlink from Curriculums (optional: if you want them to stay but without template)
+		// Note: We need to make sure Curriculum.PreCurriculumID is nullable first
+		if err := tx.Model(&entities.Curriculum{}).Where("pre_curriculum_id = ?", id).Update("pre_curriculum_id", nil).Error; err != nil {
+			return err
+		}
+
+		// 3. Delete all associated subjects links in this curriculum
+		if err := tx.Where("pre_curriculum_id = ?", id).Delete(&entities.SubjectInPreCurriculum{}).Error; err != nil {
+			return err
+		}
+
+		// 4. Finally delete the PreCurriculum
+		res := tx.Delete(&entities.PreCurriculum{}, id)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return nil
+	})
 }
 
 func (r *PreCuriculumRepo) Listing(name string, perPage, page int) ([]entities.PreCurriculum, int64, error) {
@@ -108,4 +122,50 @@ func (r *PreCuriculumRepo) GetSubjectInPrecurriculumByID(id uint) (*entities.Sub
 		return nil, err
 	}
 	return &subject, nil
+}
+
+// UpdateSubjectInPreCurriculum updates the credit and associated subject name
+func (r *PreCuriculumRepo) UpdateSubjectInPreCurriculum(id uint, subjectName string, credit int) error {
+	var s entities.SubjectInPreCurriculum
+	if err := r.DB.Preload("Subject").First(&s, id).Error; err != nil {
+		return err
+	}
+
+	// Update credit
+	s.Credit = credit
+	if err := r.DB.Save(&s).Error; err != nil {
+		return err
+	}
+
+	// Update subject name
+	if s.Subject.ID != 0 {
+		s.Subject.Name = subjectName
+		if err := r.DB.Save(&s.Subject).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *PreCuriculumRepo) HasReferences(id uint) (bool, error) {
+	var count int64
+
+	// Check 1: Curriculums
+	if err := r.DB.Model(&entities.Curriculum{}).Where("pre_curriculum_id = ?", id).Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	// Check 2: Classrooms
+	if err := r.DB.Model(&entities.Classroom{}).Where("pre_curriculum_id = ?", id).Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	return false, nil
 }

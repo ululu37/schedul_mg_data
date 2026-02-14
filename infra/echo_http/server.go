@@ -25,6 +25,7 @@ type echoServer struct {
 	scadulTeacherMg      *usecase.ScadulTeacherMg
 	auth                 *usecase.Auth
 	scheduleUsecase      *usecase.ScheduleUsecase
+	importPrecuriculum   *usecase.ImportPrecuriculum
 	app                  *echo.Echo
 }
 
@@ -41,6 +42,7 @@ func NewEchoServer(config *config.Config,
 	scadulTeacherMg *usecase.ScadulTeacherMg,
 	auth *usecase.Auth,
 	scheduleUsecase *usecase.ScheduleUsecase,
+	importPrecuriculum *usecase.ImportPrecuriculum,
 ) *echoServer {
 	return &echoServer{
 		config:               config,
@@ -56,6 +58,7 @@ func NewEchoServer(config *config.Config,
 		scadulTeacherMg:      scadulTeacherMg,
 		auth:                 auth,
 		scheduleUsecase:      scheduleUsecase,
+		importPrecuriculum:   importPrecuriculum,
 	}
 }
 
@@ -71,7 +74,7 @@ func (s *echoServer) Start() {
 	}))
 
 	// Register PreCurriculum routes
-	router.RegisterPreCurriculumRoutes(s.app, s.preCurriculumUsecase)
+	router.RegisterPreCurriculumRoutes(s.app, s.preCurriculumUsecase, s.importPrecuriculum)
 	router.RegisterTeacherRoutes(s.app, s.teacherMgUsecase, s.teacherEverlute)
 	router.RegisterTermRoutes(s.app, s.termUsecase)
 	router.RegisterStudentRoutes(s.app, s.studentMg)

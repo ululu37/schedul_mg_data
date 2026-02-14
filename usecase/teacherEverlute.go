@@ -5,10 +5,12 @@ package usecase
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	dto "scadulDataMono/domain/DTO"
 	"scadulDataMono/domain/entities"
 	aiAgent "scadulDataMono/infra/Agent"
 	"strings"
+	"sync" // Added for concurrency
 )
 
 type TeacherEverlute struct {
@@ -24,7 +26,15 @@ func NewTeacherEverlute(teacherMg *TeacherMg, subjectMg *SubjectMg, agent *aiAge
 		agent:     agent,
 	}
 }
-func (t *TeacherEverlute) Everlute() error {
+func (t *TeacherEverlute) Everlute(progress chan string) error {
+	report := func(msg string) {
+		if progress != nil {
+			progress <- msg
+		}
+		fmt.Println(msg)
+	}
+
+	report("Fetching teacher list...")
 	// get teacher list
 	teachers := []entities.Teacher{}
 	for p := 1; ; p++ {
@@ -41,6 +51,7 @@ func (t *TeacherEverlute) Everlute() error {
 		}
 	}
 
+	report(fmt.Sprintf("Found %d teachers. Fetching subjects...", len(teachers)))
 	allSubjects := []entities.Subject{}
 	// Get all subjects
 	for p := 1; ; p++ {
@@ -55,78 +66,100 @@ func (t *TeacherEverlute) Everlute() error {
 			break
 		}
 	}
-	//fmt.Println("all::", allSubjects)
-	// Evaluate each teacher
+
+	report(fmt.Sprintf("Evaluating %d teachers across %d subjects...", len(teachers), len(allSubjects)))
+	// Concurrency control: limit to 10 concurrent AI requests
+	sem := make(chan struct{}, 10)
+	var wg sync.WaitGroup
 
 	for _, teacher := range teachers {
+		wg.Add(1)
+		go func(tchr entities.Teacher) {
+			defer wg.Done()
 
-		// get mysubject
-		mysubject := []entities.TeacherMySubject{}
-		for p := 1; ; p++ {
-
-			MysDB, _, err := t.teacherMg.GetMySubject(teacher.ID, -2, "", 1, 100)
-			if len(MysDB) == 0 {
-				break
+			// get mysubject
+			mysubject := []entities.TeacherMySubject{}
+			for p := 1; ; p++ {
+				MysDB, _, err := t.teacherMg.GetMySubject(tchr.ID, -2, "", p, 100)
+				if err != nil {
+					report(fmt.Sprintf("err getting subjects for teacher %s: %v", tchr.Name, err))
+					return
+				}
+				if len(MysDB) == 0 {
+					break
+				}
+				mysubject = append(mysubject, MysDB...)
+				if len(MysDB) < 100 {
+					break
+				}
 			}
-			if err != nil {
-				return err
+
+			subjectsEvu := make(map[uint]entities.Subject)
+			for _, s := range allSubjects {
+				subjectsEvu[s.ID] = s
 			}
-			mysubject = append(mysubject, MysDB...)
-			if len(MysDB) <= 100 {
-				break
+			for _, subject := range mysubject {
+				delete(subjectsEvu, subject.SubjectID)
 			}
-		}
 
-		subjectsEvu := make(map[uint]entities.Subject)
-
-		for _, s := range allSubjects {
-			subjectsEvu[s.ID] = s
-		}
-
-		for _, subject := range mysubject {
-			delete(subjectsEvu, subject.SubjectID)
-		}
-		subjectsEvuList := []entities.Subject{}
-		for _, v := range subjectsEvu {
-			subjectsEvuList = append(subjectsEvuList, v)
-		}
-
-		toMySubject := []entities.TeacherMySubject{}
-		//	fmt.Println(":::::::", subjectsEvu)
-		limit := 100
-		for len(subjectsEvuList) > 0 {
-			n := limit
-
-			if len(subjectsEvuList) < limit {
-				n = len(subjectsEvuList)
+			subjectsEvuList := []entities.Subject{}
+			for _, v := range subjectsEvu {
+				subjectsEvuList = append(subjectsEvuList, v)
 			}
 
 			if len(subjectsEvuList) == 0 {
-				break
-			}
-			//fmt.Println("len subjectsEvuList before: %d, n : %d", len(subjectsEvuList), n)
-			aiRes, err := t.everluteAi(teacher, subjectsEvuList[:n])
-			if err != nil {
-				fmt.Println("errAI", err)
-				return err
-			}
-			for _, ev := range aiRes.Evaluation {
-				fmt.Printf("id: %v, aptitude: %v\n", ev.ID, ev.Aptitude)
-				toMySubject = append(toMySubject, entities.TeacherMySubject{
-					TeacherID:  teacher.ID,
-					SubjectID:  uint(ev.ID),
-					Preference: ev.Aptitude,
-				})
-
+				return
 			}
 
-			subjectsEvuList = subjectsEvuList[n:]
-		}
-		fmt.Printf("toMySubject %+v\n", toMySubject)
-		t.teacherMg.AddMySubject(teacher.ID, toMySubject)
+			report(fmt.Sprintf("Teacher %s: evaluating %d remaining subjects", tchr.Name, len(subjectsEvuList)))
 
+			var batchWg sync.WaitGroup
+			limit := 100
+			for len(subjectsEvuList) > 0 {
+				n := limit
+				if len(subjectsEvuList) < limit {
+					n = len(subjectsEvuList)
+				}
+
+				batch := subjectsEvuList[:n]
+				subjectsEvuList = subjectsEvuList[n:]
+
+				batchWg.Add(1)
+				go func(innerTchr entities.Teacher, bth []entities.Subject) {
+					defer batchWg.Done()
+
+					sem <- struct{}{}        // Acquire semaphore
+					defer func() { <-sem }() // Release semaphore
+
+					aiRes, err := t.everluteAi(innerTchr, bth)
+					if err != nil {
+						report(fmt.Sprintf("errAI for teacher %s: %v", innerTchr.Name, err))
+						return
+					}
+
+					batchResults := []entities.TeacherMySubject{}
+					for _, ev := range aiRes.Evaluation {
+						// report(fmt.Sprintf("teacher: %s, id: %v, aptitude: %v", innerTchr.Name, ev.ID, ev.Aptitude))
+						batchResults = append(batchResults, entities.TeacherMySubject{
+							TeacherID:  innerTchr.ID,
+							SubjectID:  uint(ev.ID),
+							Preference: ev.Aptitude,
+						})
+					}
+
+					if len(batchResults) > 0 {
+						if err := t.teacherMg.AddMySubject(innerTchr.ID, batchResults); err != nil {
+							report(fmt.Sprintf("err saving results for teacher %s: %v", innerTchr.Name, err))
+						}
+					}
+				}(tchr, batch)
+			}
+			batchWg.Wait()
+			report(fmt.Sprintf("Teacher %s: evaluation complete", tchr.Name))
+		}(teacher)
 	}
-	fmt.Println("success")
+	wg.Wait()
+	report("AI Evaluation Process Complete")
 	return nil
 }
 
@@ -138,30 +171,29 @@ func (t *TeacherEverlute) everluteAi(teacher entities.Teacher, mysubject []entit
 		{
 			Role: "system",
 			Content: `
-You are an aptitude evaluator for teachers and subjects.
-
-Evaluate the teacher’s aptitude for each subject.
-
+You are a teacher aptitude evaluator. Output ONLY valid JSON.
+Evaluate the teacher's aptitude for each provided subject based on their resume.
 Aptitude score scale: 0–10
 
-มาตราฐานการประเมิน
- 10 - 9 > บอกว่าถนัด
- 8-6 > ควรสอนได้ตามสายงานที่จบมา
- 5-1 > น่าจะสอนได้ 
- วิชาที่ไม่น่าจะสอนไม่ได้ ไห้คะเเนเป็น 0 เเล้วตส่งมาด้วย
-Output JSON only.
+Scoring Guide:
+- 10-9: Expert/Fluent in this subject.
+- 8-6: Should be able to teach based on their field of study.
+- 5-1: Might be able to teach with some preparation.
+- 0: Unfit to teach this subject (MUST include these in the output too).
 
-Output schema:
+Output EXACTLY this JSON structure:
 {
   "evaluation": [
-    { "id": "number", "aptitude": "number" }
+    { "id": number, "aptitude": number }
   ]
 }
+
+IMPORTANT: Do NOT include any explanations, Markdown formatting (e.g., no json blocks), or trailing commas.
 `,
 		},
 		{
 			Role:    "user",
-			Content: fmt.Sprintf("teacher_resume: %s,%+v", teacher.Resume, mysubject),
+			Content: fmt.Sprintf("teacher_resume: %s\nsubjects_to_evaluate: %+v", teacher.Resume, mysubject),
 		},
 	},
 	)
@@ -175,17 +207,37 @@ Output schema:
 
 	var res dto.EvaluationResponse
 
-	content := respBody.Choices[0].Message.Content
+	// Handle content type assertion
+	content, ok := respBody.Choices[0].Message.Content.(string)
+	if !ok {
+		return nil, fmt.Errorf("AI agent returned non-string content")
+	}
+
+	// Clean up potential Markdown blocks
+	content = strings.TrimSpace(content)
+	if strings.HasPrefix(content, "```json") {
+		content = strings.TrimPrefix(content, "```json")
+		content = strings.TrimSuffix(content, "```")
+	} else if strings.HasPrefix(content, "```") {
+		content = strings.TrimPrefix(content, "```")
+		content = strings.TrimSuffix(content, "```")
+	}
+
 	start := strings.Index(content, "{")
 	end := strings.LastIndex(content, "}")
 	if start != -1 && end != -1 && start < end {
 		content = content[start : end+1]
 	}
 
+	// Remove trailing commas that AI often generates (e.g., [1, 2, ])
+	re := regexp.MustCompile(`,\s*([\]}])`)
+	content = re.ReplaceAllString(content, "$1")
+
 	errJsonEncode := json.Unmarshal([]byte(content), &res)
 	if errJsonEncode != nil {
-		return nil, errJsonEncode
+		fmt.Printf("DEBUG: Failed to parse AI JSON for teacher %s. Raw content: %s\n", teacher.Name, content)
+		return nil, fmt.Errorf("failed to parse AI response: %v", errJsonEncode)
 	}
-	fmt.Println("AIres")
+	fmt.Println("AI evaluation parsed successfully")
 	return &res, nil
 }

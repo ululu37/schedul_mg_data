@@ -80,3 +80,57 @@ func (r *SubjectRepo) GetByID(id uint) (*entities.Subject, error) {
 	}
 	return sub, nil
 }
+
+func (r *SubjectRepo) GetByName(name string) (*entities.Subject, error) {
+	sub := &entities.Subject{}
+	if err := r.DB.Where("name = ?", name).First(sub).Error; err != nil {
+		return nil, err
+	}
+	return sub, nil
+}
+
+func (r *SubjectRepo) HasReferences(id uint) (bool, error) {
+	var count int64
+
+	// Case 1: PreCurriculum
+	if err := r.DB.Model(&entities.SubjectInPreCurriculum{}).Where("subject_id = ?", id).Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	// Case 2: Curriculum
+	if err := r.DB.Model(&entities.SubjectInCurriculum{}).Where("subject_id = ?", id).Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	// Case 3: Teacher Preferences
+	if err := r.DB.Model(&entities.TeacherMySubject{}).Where("subject_id = ?", id).Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	// Case 4: Generated Schedules (Teacher)
+	if err := r.DB.Model(&entities.SubjectInScadulTeacher{}).Where("subject_id = ?", id).Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	// Case 5: Generated Schedules (Student)
+	if err := r.DB.Model(&entities.SubjectInScadulStudent{}).Where("subject_id = ?", id).Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}

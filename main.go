@@ -30,6 +30,7 @@ func main() {
 	aiAgent := aiAgent.NewAiAgent(
 		cfg.AiAgent.ApiKey,
 		cfg.AiAgent.Url,
+		cfg.AiAgent.Model,
 	)
 
 	// Init usecases
@@ -44,9 +45,10 @@ func main() {
 	scadulStudentMg := usecase.NewScadulStudentMg(scadulStudentRepo)
 	scadulTeacherMg := usecase.NewScadulTeacherMg(scadulTeacherRepo)
 	scheduleUsecase := usecase.NewScheduleUsecase(teacherRepo, classroomRepo, scadulStudentRepo, scadulTeacherRepo)
+	importPrecuriculum := usecase.NewImportPrecuriculum(preCurriculum, aiAgent)
 	auth := usecase.NewAuth(authRepo, studentMg, teacherMg)
 
 	// Start echo server
-	server := echohttp.NewEchoServer(&cfg, subjectMg, preCurriculum, teacherMg, teacherEverlute, termUsecase, studentMg, classroomMg, curriculumMg, scadulStudentMg, scadulTeacherMg, auth, scheduleUsecase)
+	server := echohttp.NewEchoServer(&cfg, subjectMg, preCurriculum, teacherMg, teacherEverlute, termUsecase, studentMg, classroomMg, curriculumMg, scadulStudentMg, scadulTeacherMg, auth, scheduleUsecase, importPrecuriculum)
 	server.Start()
 }

@@ -76,8 +76,14 @@ func GetAiAgentEnv() AiAgent {
 		return val
 	}
 
+	model := os.Getenv("AI_AGENT_MODEL")
+	if model == "" {
+		model = "google/gemini-2.0-flash-exp:free"
+	}
+
 	return AiAgent{
 		ApiKey: get("AI_AGENT_API_KEY"),
 		Url:    get("AI_AGENT_URL"),
+		Model:  model,
 	}
 }

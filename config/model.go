@@ -29,4 +29,5 @@ type Server struct {
 type AiAgent struct {
 	ApiKey string
 	Url    string
+	Model  string
 }

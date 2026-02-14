@@ -8,6 +8,6 @@ type Classroom struct {
 	Year            *int   `json:"year"`
 
 	Student       []Student     `gorm:"ForeignKey:ClassroomID;references:ID;" json:"students"`
-	PreCurriculum PreCurriculum `gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"-"`
-	Curriculum    Curriculum    `gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"-"`
+	PreCurriculum PreCurriculum `gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"pre_curriculum"`
+	Curriculum    Curriculum    `gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"curriculum"`
 }

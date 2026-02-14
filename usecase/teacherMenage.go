@@ -76,6 +76,10 @@ func (u *TeacherMg) RemoveMySubject(ids []uint) error {
 	return u.teacherRepo.RemoveMySubject(ids)
 }
 
+func (u *TeacherMg) DeleteAllMySubjects(teacherID uint) error {
+	return u.teacherRepo.DeleteAllMySubjects(teacherID)
+}
+
 func (u *TeacherMg) GetMySubject(teacherID uint, minPreference int, search string, page, perPage int) ([]entities.TeacherMySubject, int64, error) {
 	return u.teacherRepo.GetMySubject(teacherID, minPreference, search, page, perPage)
 }

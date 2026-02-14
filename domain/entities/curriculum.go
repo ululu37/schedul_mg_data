@@ -3,9 +3,9 @@ package entities
 type Curriculum struct {
 	ID              uint   `gorm:"primaryKey" json:"id"`
 	Name            string `gorm:"size:200" json:"name"`
-	PreCurriculumID uint   `json:"pre_curriculum_id"`
+	PreCurriculumID *uint  `json:"pre_curriculum_id"`
 
-	PreCurriculum PreCurriculum `gorm:"foreignKey:PreCurriculumID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"-"`
+	PreCurriculum PreCurriculum `gorm:"foreignKey:PreCurriculumID;constraint:OnDelete:SET NULL,OnUpdate:CASCADE" json:"-"`
 
 	SubjectInCurriculum []SubjectInCurriculum `gorm:"foreignKey:CurriculumID;" json:"subject_in_curriculums"`
 }

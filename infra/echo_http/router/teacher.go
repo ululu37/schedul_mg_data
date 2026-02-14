@@ -9,8 +9,15 @@ import (
 	"scadulDataMono/usecase"
 	"strconv"
 
+	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 )
+
+var teacherUpgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // Adjust for production security
+	},
+}
 
 func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *usecase.TeacherEverlute) {
 	g := e.Group("/teacher")
@@ -161,8 +168,51 @@ func RegisterTeacherRoutes(e *echo.Echo, uc *usecase.TeacherMg, tEverlute *useca
 		return c.NoContent(http.StatusOK)
 	}, middleware.Permit(0))
 
-	g.POST("/aieverlute", func(c echo.Context) error {
-		err := tEverlute.Everlute()
+	g.DELETE("/:id/mysubject/all", func(c echo.Context) error {
+		teacherID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, "invalid teacher id")
+		}
+		err = uc.DeleteAllMySubjects(uint(teacherID))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return c.NoContent(http.StatusOK)
+	}, middleware.Permit(0))
+
+	g.GET("/aievaluate/ws", func(c echo.Context) error {
+		ws, err := teacherUpgrader.Upgrade(c.Response(), c.Request(), nil)
+		if err != nil {
+			return err
+		}
+		defer ws.Close()
+
+		progress := make(chan string)
+		done := make(chan bool)
+
+		go func() {
+			err := tEverlute.Everlute(progress)
+			if err != nil {
+				progress <- fmt.Sprintf("Error: %v", err)
+			}
+			done <- true
+		}()
+
+		for {
+			select {
+			case msg := <-progress:
+				if err := ws.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+					return err
+				}
+			case <-done:
+				ws.WriteMessage(websocket.TextMessage, []byte("FINISHED"))
+				return nil
+			}
+		}
+	})
+
+	g.POST("/aievaluate", func(c echo.Context) error {
+		err := tEverlute.Everlute(nil)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}

@@ -5,8 +5,10 @@ package aiAgent
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 //const apiKey = "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" // ใส่ API Key ของคุณที่นี่
@@ -15,24 +17,30 @@ import (
 type Agent struct {
 	ApiKey string
 	ApiURL string
+	Model  string
 }
 
-func NewAiAgent(apiKey string, apiURL string) *Agent {
+func NewAiAgent(apiKey string, apiURL string, model string) *Agent {
 	return &Agent{
 		ApiKey: apiKey,
 		ApiURL: apiURL,
+		Model:  model,
 	}
 }
 
 func (g *Agent) Chat(messages []Message) (*ChatCompletionResponse, error) {
 	reqBody := GPTMini4Request{
-		Model:    "google/gemini-3-flash-preview",
+		Model:    g.Model,
 		Messages: messages,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, err
 	}
+
+	// Log payload size for debugging
+	sizeMB := float64(len(bodyBytes)) / 1024 / 1024
+	fmt.Printf("AI Request Payload Size: %.2f MB\n", sizeMB)
 
 	req, err := http.NewRequest("POST", g.ApiURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
@@ -41,7 +49,9 @@ func (g *Agent) Chat(messages []Message) (*ChatCompletionResponse, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+g.ApiKey)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 5 * time.Minute,
+	}
 	resp, err := client.Do(req)
 
 	if err != nil {
@@ -51,6 +61,9 @@ func (g *Agent) Chat(messages []Message) (*ChatCompletionResponse, error) {
 	defer resp.Body.Close()
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("AI API error (status %d): %s", resp.StatusCode, string(respBody))
+	}
 	//fmt.Println(string(respBody))
 
 	var result ChatCompletionResponse
