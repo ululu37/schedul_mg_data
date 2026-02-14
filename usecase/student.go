@@ -52,3 +52,7 @@ func (u *StudentMg) Delete(id uint) error {
 func (u *StudentMg) DeleteByAuthID(authID uint) error {
 	return u.StudentRepo.DeleteByAuthID(authID)
 }
+
+func (u *StudentMg) GetByAuthID(authID uint) (*entities.Student, error) {
+	return u.StudentRepo.GetByAuthID(authID)
+}

@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	dto "scadulDataMono/domain/DTO"
 	"scadulDataMono/domain/entities"
 	"scadulDataMono/infra/echo_http/middleware"
 	"scadulDataMono/usecase"
@@ -77,4 +78,13 @@ func RegisterAuthRoutes(e *echo.Echo, uc *usecase.Auth) {
 		}
 		return c.NoContent(http.StatusOK)
 	}, middleware.Permit(0))
+
+	g.GET("/me", func(c echo.Context) error {
+		user := c.Get("user").(dto.PayLoad)
+		profile, err := uc.GetProfile(user.ID, user.HumanType)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, profile)
+	}, middleware.Permit(0, 1))
 }

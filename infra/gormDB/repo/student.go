@@ -115,3 +115,11 @@ func (r *StudentRepo) GetByID(id uint) (*entities.Student, error) {
 	}
 	return s, nil
 }
+
+func (r *StudentRepo) GetByAuthID(authID uint) (*entities.Student, error) {
+	s := &entities.Student{}
+	if err := r.DB.Preload("Auth").Preload("Curriculum").Preload("Classroom").Where("auth_id = ?", authID).First(s).Error; err != nil {
+		return nil, err
+	}
+	return s, nil
+}

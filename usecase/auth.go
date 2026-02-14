@@ -73,3 +73,12 @@ func (a *Auth) Delete(authID uint, humanType string) error {
 
 	return a.authRepo.DeleteByID(authID)
 }
+
+func (a *Auth) GetProfile(authID uint, humanType string) (interface{}, error) {
+	if humanType == "s" {
+		return a.studentMg.GetByAuthID(authID)
+	} else if humanType == "t" {
+		return a.teacherMg.GetByAuthID(authID)
+	}
+	return nil, errors.New("admin has no human profile")
+}

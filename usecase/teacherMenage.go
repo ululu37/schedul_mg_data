@@ -118,3 +118,7 @@ func (u *TeacherMg) Update(id uint, name, resume string) (*entities.Teacher, err
 	}
 	return u.teacherRepo.Update(id, updated)
 }
+
+func (u *TeacherMg) GetByAuthID(authID uint) (*entities.Teacher, error) {
+	return u.teacherRepo.GetByAuthID(authID)
+}

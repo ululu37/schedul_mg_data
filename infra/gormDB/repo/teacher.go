@@ -220,3 +220,11 @@ func (r *TeacherRepo) GetAllWithRelations() ([]entities.Teacher, error) {
 	}
 	return list, nil
 }
+
+func (r *TeacherRepo) GetByAuthID(authID uint) (*entities.Teacher, error) {
+	var teacher entities.Teacher
+	if err := r.DB.Preload("MySubject").Preload("MySubject.Subject").Where("auth_id = ?", authID).First(&teacher).Error; err != nil {
+		return nil, err
+	}
+	return &teacher, nil
+}

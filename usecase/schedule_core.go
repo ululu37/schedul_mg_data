@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"scadulDataMono/domain/entities"
+	"sort"
 )
 
 type SchedulRes struct {
@@ -31,126 +32,155 @@ type ResultAssign struct {
 	erverageHour    int
 }
 
+type TeacherRule struct {
+	TeacherID        uint
+	Consecutive      int   // เช่น 4 คาบติด
+	BusyPeriods      []int // คาบที่ไม่ว่างจริงๆ
+	PreferredPeriods []int // คาบที่อยากสอนเป็นพิเศษ
+}
+
 func AssignSubject(everageHour int, teacherAssign map[uint]TeacherAssign, classroomAssign map[string]struct{}, teachers []entities.Teacher, classrooms []entities.Classroom, is_everage bool) (*ResultAssign, error) {
 
 	if everageHour == 0 || everageHour > 40 {
 		return nil, errors.New("ไม่สามารถจัดตารางได้")
 	}
 
-	// เริ่มเเจกงาน
+	// 1. ดึงวิชาจากทุกห้องออกมารวมกัน (Global Pool)
+	type GlobalSubject struct {
+		ClassroomID uint
+		Subject     entities.SubjectInPreCurriculum
+	}
+	var allSubjects []GlobalSubject
 	for _, cl := range classrooms {
-		for _, subjectInCurriculum := range cl.Curriculum.SubjectInCurriculum {
-			subject := subjectInCurriculum.SubjectInPreCurriculum
-			if !is_everage {
-				if _, ok := classroomAssign[fmt.Sprintf("%d-%d", cl.ID, subject.SubjectID)]; ok {
-					fmt.Println("skip", cl.ID, subject.SubjectID)
-					continue
-				}
-			}
+		for _, sic := range cl.Curriculum.SubjectInCurriculum {
+			allSubjects = append(allSubjects, GlobalSubject{
+				ClassroomID: cl.ID,
+				Subject:     sic.SubjectInPreCurriculum,
+			})
+		}
+	}
 
-			//หาครูที่สอนวิชา นี้ ได้
-			teacherTech := make(map[uint]int) // [TeacherID]preferance
-			for id, teacher := range teacherAssign {
-				if _, ok := teacher.MySubjects[subject.SubjectID]; ok {
+	// 2. จัดลำดับตามหน่วยกิตจากมากไปน้อย และเรียงตาม SubjectID สำหรับวิชาที่เหมือนกัน
+	sort.Slice(allSubjects, func(i, j int) bool {
+		if allSubjects[i].Subject.Credit != allSubjects[j].Subject.Credit {
+			return allSubjects[i].Subject.Credit > allSubjects[j].Subject.Credit
+		}
+		if allSubjects[i].Subject.SubjectID != allSubjects[j].Subject.SubjectID {
+			return allSubjects[i].Subject.SubjectID < allSubjects[j].Subject.SubjectID
+		}
+		return allSubjects[i].ClassroomID < allSubjects[j].ClassroomID
+	})
 
-					if teacher.AllocatedHour+subject.Credit > 40 {
+	// 3. เริ่มเเจกงานจากกองกลาง
+	for _, gs := range allSubjects {
+		subject := gs.Subject
+		clID := gs.ClassroomID
 
-						continue
-					}
-					if teacher.AllocatedHour+subject.Credit > everageHour && is_everage {
-
-						continue
-					}
-
-					teacherTech[id] = teacher.MySubjects[subject.SubjectID].Preference
-
-				}
-			}
-			isBreak := false
-			//เอาคนคะเเนน เยอะก่อน
-			for i := 10; i != 1; i-- {
-				///fmt.Println(i)
-				//คัดวิชา prefreranc i
-				mostPreferanceteacher := []uint{}
-				for id, preferance := range teacherTech {
-					if preferance == i {
-
-						mostPreferanceteacher = append(mostPreferanceteacher, id)
-					}
-				}
-				//fmt.Println(mostPreferanceteacher)
-				//เรียงตามจำนวนชั่วโมง น้อยไปมาก
-				if len(mostPreferanceteacher) == 0 {
-					continue
-				}
-
-				if len(mostPreferanceteacher) > 1 {
-					for r := 1; r < len(mostPreferanceteacher); r++ {
-
-						for it := range mostPreferanceteacher {
-							if it == len(mostPreferanceteacher)-r {
-
-								break
-							}
-							if teacherAssign[mostPreferanceteacher[it]].AllocatedHour > teacherAssign[mostPreferanceteacher[it+1]].AllocatedHour {
-								cache := mostPreferanceteacher[it]
-								mostPreferanceteacher[it] = mostPreferanceteacher[it+1]
-								mostPreferanceteacher[it+1] = cache
-							}
-
-						}
-					}
-				}
-
-				//เเจกงาน
-				for _, teacher := range mostPreferanceteacher {
-					if teacherAssign[teacher].AllocatedHour+subject.Credit > 40 {
-						continue
-					}
-
-					// Get the struct from the map
-					ta := teacherAssign[teacher]
-					// Modify the struct
-
-					ta.AllocatedHour += subject.Credit
-
-					// Initialize the Subjects map if it's nil
-					//fmt.Println(cl.CurriculumID)
-					key := fmt.Sprintf("%d-%d", subject.SubjectID, cl.ID)
-					ta.Subjects[key] = SubjectAssign{
-						SubjectID:   subject.SubjectID,
-						Credit:      subject.Credit,
-						ClassroomID: cl.ID,
-					}
-					// Put the modified struct back into the map
-					teacherAssign[teacher] = ta
-					classroomAssign[fmt.Sprintf("%d-%d", cl.ID, subject.SubjectID)] = struct{}{}
-					isBreak = true
-
-					break
-
-				}
-				if isBreak {
-					break
-				}
-			}
-			if !is_everage {
-				if !isBreak {
-					return nil, errors.New("ไม่สามารถจัดตารางได้")
-				}
+		if !is_everage {
+			if _, ok := classroomAssign[fmt.Sprintf("%d-%d", clID, subject.SubjectID)]; ok {
+				continue
 			}
 		}
 
+		//หาครูที่สอนวิชานี้ได้
+		teacherTech := make(map[uint]int) // [TeacherID]preferance
+		for id, teacher := range teacherAssign {
+			if _, ok := teacher.MySubjects[subject.SubjectID]; ok {
+				if teacher.AllocatedHour+subject.Credit > 40 {
+					continue
+				}
+				if teacher.AllocatedHour+subject.Credit > everageHour && is_everage {
+					continue
+				}
+				teacherTech[id] = teacher.MySubjects[subject.SubjectID].Preference
+			}
+		}
+
+		isBreak := false
+		//เอาคนคะเเนนเยอะก่อน (Preference 10 -> 1)
+		for i := 10; i >= 1; i-- {
+			mostPreferanceteacher := []uint{}
+			for id, preferance := range teacherTech {
+				if preferance == i {
+					mostPreferanceteacher = append(mostPreferanceteacher, id)
+				}
+			}
+
+			if len(mostPreferanceteacher) == 0 {
+				continue
+			}
+
+			// เรียงตามจำนวนชั่วโมง น้อยไปมาก (ระบุ Priority ใหม่)
+			if len(mostPreferanceteacher) > 1 {
+				sort.Slice(mostPreferanceteacher, func(i, j int) bool {
+					tI := teacherAssign[mostPreferanceteacher[i]]
+					tJ := teacherAssign[mostPreferanceteacher[j]]
+
+					// --- เพิ่มระบบ Loyalty Check ---
+					// ใครเคยรับวิชานี้ไปแล้ว (ในห้องอื่น) จะมี Priority สูงกว่า
+					hasSubI := false
+					for _, s := range tI.Subjects {
+						if s.SubjectID == subject.SubjectID {
+							hasSubI = true
+							break
+						}
+					}
+					hasSubJ := false
+					for _, s := range tJ.Subjects {
+						if s.SubjectID == subject.SubjectID {
+							hasSubJ = true
+							break
+						}
+					}
+
+					if hasSubI != hasSubJ {
+						return hasSubI // ถ้า I มี แต่ J ไม่มี ให้ I ก่อน
+					}
+
+					// ถ้ามีเหมือนกัน หรือไม่มีเหมือนกัน ให้คนงานน้อยก่อนตามปกติ
+					return tI.AllocatedHour < tJ.AllocatedHour
+				})
+			}
+
+			//เเจกงาน
+			for _, teacherID := range mostPreferanceteacher {
+				if teacherAssign[teacherID].AllocatedHour+subject.Credit > 40 {
+					continue
+				}
+
+				ta := teacherAssign[teacherID]
+				ta.AllocatedHour += subject.Credit
+				key := fmt.Sprintf("%d-%d", subject.SubjectID, clID)
+				ta.Subjects[key] = SubjectAssign{
+					SubjectID:   subject.SubjectID,
+					Credit:      subject.Credit,
+					ClassroomID: clID,
+				}
+				teacherAssign[teacherID] = ta
+				classroomAssign[fmt.Sprintf("%d-%d", clID, subject.SubjectID)] = struct{}{}
+				isBreak = true
+				break
+			}
+			if isBreak {
+				break
+			}
+		}
+
+		if !is_everage {
+			if !isBreak {
+				return nil, fmt.Errorf("ไม่สามารถจัดตารางได้: วิชาวรหัส %d ในห้องพัก %d ไม่มีครูที่เหมาะสม", subject.SubjectID, clID)
+			}
+		}
 	}
+
 	return &ResultAssign{
 		teacherAssign:   teacherAssign,
 		classroomAssign: classroomAssign,
 		erverageHour:    everageHour,
 	}, nil
-
 }
 
-func Can(teachers []entities.Teacher, classrooms []entities.Classroom) (SchedulRes, error) {
+func Can(teachers []entities.Teacher, classrooms []entities.Classroom, rules []TeacherRule) (SchedulRes, error) {
 	fmt.Println("classrooms", len(classrooms))
 	for _, cl := range classrooms {
 		fmt.Println("cl", cl.Name)
@@ -183,7 +213,7 @@ func Can(teachers []entities.Teacher, classrooms []entities.Classroom) (SchedulR
 	for id, teacher := range result.teacherAssign {
 		fmt.Printf("teacher %d : %d\n", id, teacher.AllocatedHour)
 	}
-	oderTable := orderSchedule(result.teacherAssign, classrooms)
+	oderTable := orderSchedule(result.teacherAssign, classrooms, rules)
 	for i := 1; i <= 40; i++ {
 		fmt.Printf("%d : %v %v %v\n", i, oderTable[position{x: 0, y: i}], oderTable[position{x: 1, y: i}], oderTable[position{x: 2, y: i}])
 	}
@@ -247,8 +277,8 @@ func Can(teachers []entities.Teacher, classrooms []entities.Classroom) (SchedulR
 	}, nil
 }
 
-func orderSchedule(teacherAssign map[uint]TeacherAssign, classrooms []entities.Classroom) map[position]*TeacherInOrder {
-	teacher := NewTeacherAllocate(teacherAssign)
+func orderSchedule(teacherAssign map[uint]TeacherAssign, classrooms []entities.Classroom, rules []TeacherRule) map[position]*TeacherInOrder {
+	teacher := NewTeacherAllocate(teacherAssign, rules)
 	order := make(map[position]*TeacherInOrder)
 	for i := 1; i <= 40; i++ {
 		for roomI := range classrooms {
@@ -267,14 +297,22 @@ type TeacherInOrder struct {
 }
 
 type teacherAllocate struct {
-	TeacherAssign map[uint]TeacherAssign
-	YAdded        map[int]InAdded
+	TeacherAssign      map[uint]TeacherAssign
+	YAdded             map[int]InAdded
+	TeacherRules       map[uint]TeacherRule
+	LastClassroomAlloc map[uint]LastAlloc // [ClassroomID]LastAlloc
+}
+
+type LastAlloc struct {
+	TeacherID uint
+	SubjectID uint
+	Count     int
 }
 type InAdded struct {
 	teachers map[uint]struct{}
 }
 
-func NewTeacherAllocate(TeacherAssign map[uint]TeacherAssign) teacherAllocate {
+func NewTeacherAllocate(TeacherAssign map[uint]TeacherAssign, rules []TeacherRule) teacherAllocate {
 	yAdded := make(map[int]InAdded)
 	for i := 1; i <= 40; i++ {
 		teachers := make(map[uint]struct{})
@@ -283,9 +321,24 @@ func NewTeacherAllocate(TeacherAssign map[uint]TeacherAssign) teacherAllocate {
 		}
 		yAdded[i] = InAdded{teachers: teachers}
 	}
+
+	ruleMap := make(map[uint]TeacherRule)
+	for _, r := range rules {
+		existing := ruleMap[r.TeacherID]
+		if r.Consecutive > 0 {
+			existing.Consecutive = r.Consecutive
+		}
+		existing.BusyPeriods = append(existing.BusyPeriods, r.BusyPeriods...)
+		existing.PreferredPeriods = append(existing.PreferredPeriods, r.PreferredPeriods...)
+		existing.TeacherID = r.TeacherID
+		ruleMap[r.TeacherID] = existing
+	}
+
 	return teacherAllocate{
-		TeacherAssign: TeacherAssign,
-		YAdded:        yAdded,
+		TeacherAssign:      TeacherAssign,
+		YAdded:             yAdded,
+		TeacherRules:       ruleMap,
+		LastClassroomAlloc: make(map[uint]LastAlloc),
 	}
 }
 
@@ -293,55 +346,183 @@ func (ta *teacherAllocate) tik(y int, classroomID uint) *TeacherInOrder {
 	var winID uint
 	var winSubjectID uint
 	var winKey string
-	var maxHour int = -1
+	var maxScore int = -10000
 	found := false
 
-	// หาครูที่มีชั่วโมงมากที่สุดและยังไม่ได้ถูกเพิ่มในคาบ y
-	if len(ta.YAdded[y].teachers) > 0 {
+	last := ta.LastClassroomAlloc[classroomID]
 
+	// 1. ลองหาจากครูที่ถูก "มอบหมาย" งานไว้ก่อน (Primary Assigned)
+	if len(ta.YAdded[y].teachers) > 0 {
 		for teacherID := range ta.YAdded[y].teachers {
-			// Check if teacher has subjects for this classroom
 			t := ta.TeacherAssign[teacherID]
-			for key, sub := range t.Subjects {
-				if sub.ClassroomID == classroomID && sub.Credit > 0 {
-					if t.AllocatedHour > maxHour {
-						maxHour = t.AllocatedHour
-						winID = teacherID
-						winSubjectID = sub.SubjectID
-						winKey = key
-						found = true
-					}
-					// Found a valid subject for this teacher, compare with maxHour
-					// We break inner loop because any valid subject qualifies the teacher
-					// But wait, if teacher has multiple subjects for same class?
-					// Just picking one is fine.
+			rule := ta.TeacherRules[teacherID]
+
+			isBusy := false
+			for _, p := range rule.BusyPeriods {
+				if p == y {
+					isBusy = true
 					break
 				}
 			}
+
+			// ค้นหาวิจาที่ "ดีที่สุด" (ID น้อยสุด) ของครูคนนี้ในห้องนี้
+			var bestSub SubjectAssign
+			var bestKey string
+			minSubID := uint(999999)
+			for key, sub := range t.Subjects {
+				if sub.ClassroomID == classroomID && sub.Credit > 0 {
+					if sub.SubjectID < minSubID {
+						minSubID = sub.SubjectID
+						bestSub = sub
+						bestKey = key
+					}
+				}
+			}
+
+			if minSubID != 999999 {
+				sub := bestSub
+				key := bestKey
+
+				// คะแนนพื้นฐานใช้ AllocatedHour
+				currentScore := t.AllocatedHour * 5
+
+				if isBusy {
+					currentScore -= 10000
+				}
+
+				// กฎเหล็ก: ถ้าเป็นครูคนเดิมในห้องเดิม แต่เปลี่ยนวิชา ให้โดนหักคะแนนหนัก
+				// (ยกเว้นวิชาเดิมจะหมดแล้วจริงๆ ซึ่งเช็คจากการที่ ID เปลี่ยนไป)
+				if last.TeacherID == teacherID && last.SubjectID != sub.SubjectID {
+					currentScore -= 5000 // ป้องกันการสลับวิชาไปมา
+				}
+
+				// โบนัสความชอบ (Preferred Periods)
+				for _, pp := range rule.PreferredPeriods {
+					if pp == y {
+						currentScore += 500
+						break
+					}
+				}
+
+				// โบนัสความต่อเนื่อง (เฉพาะวิชาเดิม)
+				if last.TeacherID == teacherID && last.SubjectID == sub.SubjectID {
+					target := 2
+					if rule.Consecutive > 0 {
+						target = rule.Consecutive
+					}
+					if last.Count < target {
+						currentScore += 2000
+					}
+				}
+
+				if currentScore > maxScore {
+					maxScore = currentScore
+					winID = teacherID
+					winSubjectID = sub.SubjectID
+					winKey = key
+					found = true
+				}
+			}
 		}
-	} else {
-		return nil
 	}
-	if !found {
+
+	// 2. [Substitution] ถ้าคนหลักติด Busy หรือยังหาคนลงไม่ได้ ให้ลองคนอื่นที่ "สอนได้" และ "ว่างจริง"
+	if !found || maxScore < 0 {
+		subScore := -10000
+		var subID uint
+		var subTID uint
+		subFound := false
+
+		neededSubjects := make(map[uint]int)
+		for _, t := range ta.TeacherAssign {
+			for _, sub := range t.Subjects {
+				if sub.ClassroomID == classroomID && sub.Credit > 0 {
+					neededSubjects[sub.SubjectID] += sub.Credit
+				}
+			}
+		}
+
+		for sID, credit := range neededSubjects {
+			for tID := range ta.YAdded[y].teachers {
+				t := ta.TeacherAssign[tID]
+				rule := ta.TeacherRules[tID]
+
+				busy := false
+				for _, p := range rule.BusyPeriods {
+					if p == y {
+						busy = true
+						break
+					}
+				}
+				if busy {
+					continue
+				}
+
+				if _, canTeach := t.MySubjects[sID]; canTeach {
+					if t.AllocatedHour > 0 {
+						// คะแนนตัวสำรอง: เน้นกระจายงาน
+						currentScore := (t.AllocatedHour * 3) + (credit * 10)
+
+						if currentScore > subScore {
+							subScore = currentScore
+							subTID = tID
+							subID = sID
+							subFound = true
+						}
+					}
+				}
+			}
+		}
+
+		// ถ้าตัวสำรองคะแนนดีกว่า (และไม่ติด Busy) ให้เลือกตัวสำรอง
+		if subFound && subScore > maxScore {
+			maxScore = subScore
+			winID = subTID
+			winSubjectID = subID
+			winKey = ""
+			found = true
+		}
+	}
+
+	// ถ้าเจอกันแต่ติด Busy มหาศาล ให้ปล่อยว่าง
+	if !found || maxScore < -5000 {
+		ta.LastClassroomAlloc[classroomID] = LastAlloc{}
 		return nil
 	}
 
+	// อัปเดตข้อมูลการสอน
+	if last.TeacherID == winID && last.SubjectID == winSubjectID {
+		last.Count++
+	} else {
+		last = LastAlloc{TeacherID: winID, SubjectID: winSubjectID, Count: 1}
+	}
+	ta.LastClassroomAlloc[classroomID] = last
+
 	delete(ta.YAdded[y].teachers, winID)
-	//fmt.Printf("winID %v\n", ta.YAdded[y].teachers)
-	// Get the struct from the map, modify it, and put it back
 	teacher := ta.TeacherAssign[winID]
 	teacher.AllocatedHour -= 1
 
-	// Decrement subject credit
-	if s, ok := teacher.Subjects[winKey]; ok {
-		s.Credit -= 1
-		teacher.Subjects[winKey] = s
+	// หักโควตาวิจา (ถ้าเป็นการสอนแทน ต้องไปหาฟิลด์หักให้ถูกตัว)
+	if winKey != "" {
+		if s, ok := teacher.Subjects[winKey]; ok {
+			s.Credit -= 1
+			teacher.Subjects[winKey] = s
+		}
+	} else {
+		// กรณีตัวสำรอง: หัก Credit จากครูคนแรกที่ได้รับมอบหมายวิชานี้ในห้องนี้ (เพื่อยอดรวมไม่เพี้ยน)
+		for tID, t := range ta.TeacherAssign {
+			for k, s := range t.Subjects {
+				if s.ClassroomID == classroomID && s.SubjectID == winSubjectID && s.Credit > 0 {
+					s.Credit -= 1
+					ta.TeacherAssign[tID].Subjects[k] = s
+					goto updated
+				}
+			}
+		}
 	}
 
+updated:
 	ta.TeacherAssign[winID] = teacher
-	//fmt.Printf("winID %d\n", winID)
-	//fmt.Printf("%d %d\n", ta.TeacherAssign[1].AllocatedHour, ta.TeacherAssign[2].AllocatedHour)
-
 	return &TeacherInOrder{TeacherID: winID, SubjectID: winSubjectID, ClassroomID: classroomID}
 }
 

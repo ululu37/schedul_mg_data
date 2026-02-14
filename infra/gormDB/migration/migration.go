@@ -28,9 +28,9 @@ func Migrate(db *gorm.DB) error {
 		&entities.SubjectInScadulStudent{},
 		&entities.SubjectInScadulTeacher{},
 
-		
 		&entities.PreCurriculum{},
 		&entities.SubjectInPreCurriculum{},
+		&entities.SchedulePrompt{},
 	)
 }
 func main() {

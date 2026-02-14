@@ -332,4 +332,17 @@ go run main.go
 ### Schedule (`/schedule`)
 - `post {{url}}/schedule/generate` (Admin)
   - **Purpose**: **Core Feature**. Triggers the automatic scheduling engine. This loads all data, runs the scheduling algorithm, and saves the resulting Student and Teacher schedules to the database.
-  - body: `{}`
+  - **AI-Driven Mode**: Send an optional `prompt` in the body to specify constraints using natural language.
+  - **Body**: 
+    ```json
+    {
+      "prompt": "ครูสมชายไม่ว่างช่วงบ่ายวันพุธ และครูลีน่าอยากสอนคาบเช้าวันศุกร์ 2 คาบติด"
+    }
+    ```
+  - **Time Period Mapping**:
+    - The system uses a 1-40 period scale (8 periods/day, Mon-Fri).
+    - Mon: 1-8, Tue: 9-16, Wed: 17-24, Thu: 25-32, Fri: 33-40.
+  - **AI Logic**: 
+    - The AI translates natural language into "Preferences".
+    - `Preference: 10` (Must teach), `Preference: -10` (Cannot teach), etc.
+    - These constraints are weighted against the core algorithm to ensure a valid, conflict-free schedule.

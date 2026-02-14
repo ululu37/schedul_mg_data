@@ -2,6 +2,7 @@ package repo
 
 import (
 	"scadulDataMono/domain/entities"
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -49,7 +50,10 @@ func (r *ScadulStudentRepo) Listing(search string, page, perPage int) ([]entitie
 	var count int64
 	q := r.DB.Model(&entities.ScadulStudent{}).Preload("Classroom")
 	if search != "" {
-		q = q.Where("use_in LIKE ? OR classroom_id = ?", "%"+search+"%", search)
+		q = q.Where("use_in LIKE ?", "%"+search+"%")
+		if id, err := strconv.ParseUint(search, 10, 64); err == nil {
+			q = q.Or("classroom_id = ?", id)
+		}
 	}
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, err

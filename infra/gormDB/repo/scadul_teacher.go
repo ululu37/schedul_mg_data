@@ -2,6 +2,7 @@ package repo
 
 import (
 	"scadulDataMono/domain/entities"
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -50,7 +51,10 @@ func (r *ScadulTeacherRepo) Listing(search string, page, perPage int) ([]entitie
 	q := r.DB.Model(&entities.ScadulTeacher{}).Preload("Teacher")
 	if search != "" {
 		like := "%" + search + "%"
-		q = q.Joins("LEFT JOIN teachers ON teachers.id = scadul_teachers.teacher_id").Where("use_in LIKE ? OR teachers.name LIKE ?", like, like)
+		q = q.Joins("LEFT JOIN teachers ON teachers.id = scadul_teachers.teacher_id").Where("scadul_teachers.use_in LIKE ? OR teachers.name LIKE ?", like, like)
+		if id, err := strconv.ParseUint(search, 10, 64); err == nil {
+			q = q.Or("scadul_teachers.teacher_id = ?", id)
+		}
 	}
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, err

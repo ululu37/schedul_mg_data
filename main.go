@@ -27,6 +27,7 @@ func main() {
 	curriculumRepo := &repo.CurriculumRepo{DB: db}
 	scadulStudentRepo := &repo.ScadulStudentRepo{DB: db}
 	scadulTeacherRepo := &repo.ScadulTeacherRepo{DB: db}
+	schedulePromptRepo := repo.NewSchedulePromptRepo(db)
 	aiAgent := aiAgent.NewAiAgent(
 		cfg.AiAgent.ApiKey,
 		cfg.AiAgent.Url,
@@ -44,7 +45,8 @@ func main() {
 	curriculumMg := usecase.NewCurriculumMg(curriculumRepo, preCurriculumRepo)
 	scadulStudentMg := usecase.NewScadulStudentMg(scadulStudentRepo)
 	scadulTeacherMg := usecase.NewScadulTeacherMg(scadulTeacherRepo)
-	scheduleUsecase := usecase.NewScheduleUsecase(teacherRepo, classroomRepo, scadulStudentRepo, scadulTeacherRepo)
+	scheduleAI := usecase.NewScheduleAI(aiAgent)
+	scheduleUsecase := usecase.NewScheduleUsecase(teacherRepo, classroomRepo, scadulStudentRepo, scadulTeacherRepo, scheduleAI, schedulePromptRepo)
 	importPrecuriculum := usecase.NewImportPrecuriculum(preCurriculum, aiAgent)
 	auth := usecase.NewAuth(authRepo, studentMg, teacherMg)
 

@@ -9,7 +9,12 @@ import (
 
 func RegisterScheduleRoutes(e *echo.Echo, scheduleUsecase *usecase.ScheduleUsecase) {
 	e.POST("/schedule/generate", func(c echo.Context) error {
-		res, err := scheduleUsecase.GenerateSchedule()
+		var req struct {
+			Prompt string `json:"prompt"`
+		}
+		c.Bind(&req)
+
+		res, err := scheduleUsecase.GenerateScheduleWithAI(req.Prompt)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
